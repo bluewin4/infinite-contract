@@ -1,0 +1,227 @@
+# Infinite Contract Game - Implementation Specification
+
+## 1. Core Concepts
+
+The Infinite Contract game simulates two AI agents competing by building a shared code file (the "contract") through sequential moves. Each move adds or modifies code with the goal of achieving specific victory conditions.
+
+### 1.1 Key Components
+- Shared Code Contract: The evolving program file
+- Game State: Current variable values and execution history
+- Move History: Complete record of all actions and their effects
+- Agent Memory: Contextual game history for each agent
+
+## 2. Data Structures
+
+### 2.1 Contract State
+```python
+class CodeContract:
+    def __init__(self):
+        self.current_code = []  # List of active code lines
+        self.variables = {
+            'x': 0, 
+            'y': 0, 
+            'z': 0
+        }
+        self.execution_order = []  # Order of code execution
+```
+
+### 2.2 Game History
+```python
+class GameHistory:
+    def __init__(self):
+        self.turns = []  # Complete turn records
+        self.contract_states = []  # Contract snapshots
+        self.variable_states = []  # Variable value history
+        
+    def add_turn(self, turn_data):
+        """
+        turn_data includes:
+        - Turn number
+        - Active player
+        - Available moves
+        - Selected move
+        - Contract state before/after
+        - Variable values before/after
+        - Scratch pad content
+        - Execution success/failure
+        """
+```
+
+### 2.3 Agent Memory
+```python
+class AgentMemory:
+    def __init__(self):
+        self.past_turns = []  # Previous turn contexts
+        self.victory_condition = None
+        self.strategy_notes = []  # From scratch pad
+        self.opponent_patterns = []  # Observed opponent behavior
+        
+    def get_context_window(self, current_turn, window_size=5):
+        """Return recent game history for agent context"""
+```
+
+## 3. Turn Structure
+
+### 3.1 Turn Prompt Template
+```python
+TURN_PROMPT = """
+=== Infinite Contract Game - Turn {turn_number} ===
+
+Current Contract Contents:
+{formatted_contract}
+
+Variable States:
+{formatted_variables}
+
+Game History (Last {history_window} Turns):
+{formatted_history}
+
+Your Victory Condition: {victory_condition}
+
+Available Moves:
+{numbered_card_list}
+
+Your Strategy Notes So Far:
+{strategy_notes}
+
+Think through your move, considering:
+1. Current contract state
+2. Execution order of code
+3. Previous moves and their effects
+4. Path to victory condition
+
+Format your response as:
+SCRATCH PAD:
+[your strategic thinking]
+
+SELECTED MOVE: [number]
+"""
+```
+
+### 3.2 History Formatting
+```python
+def format_game_history(history, window_size):
+    """
+    Format recent game history as:
+    Turn X: Player 1 added "x += 1" - Result: x=1, y=0, z=0
+    Turn Y: Player 2 added "y *= 2" - Result: x=1, y=0, z=0
+    ...
+    """
+```
+
+## 4. Game Flow Implementation
+
+### 4.1 Main Game Loop
+```python
+class InfiniteContractGame:
+    def __init__(self, agent1, agent2, config):
+        self.contract = CodeContract()
+        self.history = GameHistory()
+        self.agent1_memory = AgentMemory()
+        self.agent2_memory = AgentMemory()
+        
+    def run_game(self):
+        while not self.is_game_over():
+            # 1. Prepare turn context
+            current_agent = self.get_current_agent()
+            agent_memory = self.get_agent_memory(current_agent)
+            
+            # 2. Generate available moves
+            moves = self.generate_moves()
+            
+            # 3. Create turn prompt
+            prompt = self.create_turn_prompt(
+                current_agent,
+                agent_memory,
+                moves
+            )
+            
+            # 4. Get agent response
+            response = current_agent.get_response(prompt)
+            
+            # 5. Process move
+            self.process_turn(response, agent_memory)
+            
+            # 6. Update histories and memories
+            self.update_records()
+```
+
+### 4.2 Move Processing
+```python
+def process_turn(self, response, agent_memory):
+    """
+    1. Parse agent response
+    2. Validate selected move
+    3. Execute move effects
+    4. Update contract
+    5. Check victory conditions
+    6. Update agent memory
+    """
+```
+
+## 5. Data Collection
+
+### 5.1 Game Metrics
+```python
+class GameMetrics:
+    def __init__(self):
+        # Basic stats
+        self.turns_completed = 0
+        self.invalid_moves = 0
+        self.contract_length = 0
+        
+        # Strategy metrics
+        self.scratch_pad_lengths = []
+        self.move_categories = defaultdict(int)
+        self.strategy_embeddings = []
+        
+        # Memory usage
+        self.context_utilization = []  # How agents use history
+        self.strategy_evolution = []   # Changes in approach
+```
+
+### 5.2 Per-Turn Metrics
+```python
+class TurnMetrics:
+    def __init__(self):
+        self.move_validity = False
+        self.execution_time = 0
+        self.memory_used = 0
+        self.scratch_pad_analysis = None
+        self.strategy_embedding = None
+```
+
+## 6. Implementation Requirements
+
+### 6.1 Safety Requirements
+- Sandboxed code execution
+- Memory limits for agent context
+- Timeout handling for execution
+- State validation and rollback capability
+
+### 6.2 Configuration Options
+```python
+game_config = {
+    'max_turns': 50,
+    'memory_window': 5,
+    'invalid_move_penalty': 'SKIP_TURN',  # or 'LOSE_GAME'
+    'victory_conditions': {
+        'player1': 'x >= 10',
+        'player2': 'y <= -5'
+    },
+    'contract_limits': {
+        'max_lines': 100,
+        'max_complexity': 5
+    }
+}
+```
+
+## 7. Testing Requirements
+
+### 7.1 Required Test Cases
+- Basic game flow
+- Memory management
+- Contract evolution
+- Invalid move handling
+- Victory condition checking
+- Agent memory utilization
