@@ -1,6 +1,8 @@
 from src.core.game import InfiniteContractGame, GameConfig
 from src.agents.base_agent import BaseAgent
 from src.core.cards import CardLibrary, CardType
+from src.agents.lm_agent import LMAgent
+from src.agents.lm_config import LMConfig
 import random
 
 class SimpleAgent(BaseAgent):
@@ -20,26 +22,12 @@ Choosing card {selected_card} randomly.
 SELECTED CARD: {selected_card}
 """
 
-def main():
-    # Add debug printing
-    card_library = CardLibrary()
-    print("Available cards in library:")
-    for card_type in [CardType.AGGRESSIVE, CardType.DEFENSIVE, CardType.STRATEGIC]:
-        print(f"\n{card_type.value} cards:")
-        for card in card_library.get_cards_by_type(card_type):
-            print(f"- {card.name}: {card.code}")
-    
-    # Initialize card library
+def create_game_config() -> GameConfig:
     card_library = CardLibrary()
     
-    # Create game configuration
-    config = GameConfig(
+    return GameConfig(
         max_turns=50,
         memory_window=5,
-        victory_conditions={
-            'agent1': 'x >= 10',
-            'agent2': 'y <= -5'
-        },
         card_library=card_library,
         allowed_card_types=[
             CardType.AGGRESSIVE, 
@@ -49,26 +37,47 @@ def main():
         ],
         cards_per_turn=3
     )
+
+def main():
+    # Define victory conditions
+    agent1_goal = "x >= 10"
     
-    # Create agents
-    agent1 = SimpleAgent("Player 1")
-    agent2 = SimpleAgent("Player 2")
+    # Create game configuration
+    config = create_game_config()
+    
+    # Create agents with explicit goals
+    agent1 = LMAgent(
+        name="Player 1",
+        model="claude-3-haiku-20240307",
+        victory_condition=agent1_goal,
+        temperature=0.7,
+        max_tokens=500
+    )
+    
+    agent2 = LMAgent(
+        name="Player 2",
+        model="claude-3-haiku-20240307",
+        victory_condition=agent1_goal,
+        temperature=0.8,
+        max_tokens=500
+    )
     
     # Create and run game
     game = InfiniteContractGame(agent1, agent2, config)
-    
-    # Play until game over
+    run_game_with_logging(game, config.max_turns)
+
+def run_game_with_logging(game: InfiniteContractGame, max_turns: int):
     turn_count = 0
-    while game.play_turn() and turn_count < config.max_turns:
+    while game.play_turn() and turn_count < max_turns:
         turn_count += 1
-        print(f"\nTurn {turn_count}:")
-        print(f"Player: {game.current_player}")
-        print(f"Contract:\n{game.contract.current_code}")
-        print(f"Variables: {game.contract.variables}")
-    
-    print("\nGame Over!")
-    print(f"Final variables: {game.contract.variables}")
-    print(f"Total turns: {turn_count}")
+        current_turn = game.history.get_turn(turn_count)
+        
+        print(f"\n=== Turn {turn_count} ===")
+        print(f"Player: {current_turn.player_name}")
+        print(f"Thought Process:\n{current_turn.thought_process}")
+        print(f"Contract:\n{current_turn.contract_state}")
+        print(f"Variables: {current_turn.variables}")
+        print("-" * 50)
 
 if __name__ == "__main__":
     main() 

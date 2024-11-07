@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import ast
+from .cards import Card
 
 @dataclass
 class ContractState:
@@ -11,7 +12,7 @@ class ContractState:
 class CodeContract:
     def __init__(self):
         self.current_code: List[str] = []
-        self.variables: Dict[str, Any] = {'x': 0, 'y': 0, 'z': 0}
+        self.variables: Dict[str, Any] = {'x': 1, 'y': 1, 'z': 1}
         self.execution_order: List[int] = []
         self._state_history: List[ContractState] = []
         
@@ -52,6 +53,12 @@ class CodeContract:
                 return self._clean_inactive_lines()
             elif code == "__contract__.optimize()":
                 return self._optimize_execution_order()
+            elif code == "__contract__.clear()":
+                return self._clear_all_lines()
+            elif code == "__contract__.invert()":
+                return self._invert_execution_order()
+            elif code == "__contract__.remove(x)":
+                return self._remove_line(self.variables['x'])
             return False
         except Exception:
             return False
@@ -85,6 +92,8 @@ class CodeContract:
 
     def _execute_contract(self) -> bool:
         """Execute the contract safely"""
+        # Reset variables to initial state before executing
+        self.variables = {'x': 1, 'y': 1, 'z': 1}
         temp_vars = self.variables.copy()
         
         try:
@@ -114,3 +123,75 @@ class CodeContract:
             self.current_code = state['code']
             self.variables = state['variables']
             self.execution_order = state['execution_order']
+
+    def apply_card(self, card: 'Card') -> None:
+        """Apply a card's code to the contract"""
+        if card.code.startswith('__contract__'):
+            # Handle special utility commands
+            if card.code == "__contract__.pop()":
+                self._remove_last_line()
+            elif card.code == "__contract__.clean()":
+                self._clean_inactive_lines()
+            elif card.code == "__contract__.optimize()":
+                self._optimize_execution_order()
+            elif card.code == "__contract__.clear()":
+                self._clear_all_lines()
+            elif card.code == "__contract__.invert()":
+                self._invert_execution_order()
+        else:
+            # Handle regular code cards
+            self.add_line(card.code)
+            # Execute the entire contract after adding the line
+            self._execute_contract()
+
+    def check_victory_condition(self, condition: str) -> bool:
+        """Check if the victory condition is met"""
+        try:
+            # Create a copy of variables for safe evaluation
+            vars_copy = self.variables.copy()
+            # Handle greater than or equal conditions
+            if '>=' in condition:
+                var, target = condition.split('>=')
+                var = var.strip()
+                target = int(target.strip())
+                return vars_copy[var] >= target
+            # Handle less than or equal conditions
+            elif '<=' in condition:
+                var, target = condition.split('<=')
+                var = var.strip()
+                target = int(target.strip())
+                return vars_copy[var] <= target
+            # Handle equality conditions
+            elif '==' in condition:
+                var, target = condition.split('==')
+                var = var.strip()
+                target = int(target.strip())
+                return vars_copy[var] == target
+            return False
+        except Exception:
+            return False
+
+    def _clear_all_lines(self) -> bool:
+        """Clear all lines from the contract"""
+        self._save_state()
+        self.current_code = []
+        self.execution_order = []
+        return True
+
+    def _invert_execution_order(self) -> bool:
+        """Invert the execution order of all lines"""
+        self._save_state()
+        self.execution_order = list(reversed(self.execution_order))
+        return self._execute_contract()
+
+    def _remove_line(self, index: int) -> bool:
+        """Remove a specific line from the contract by index"""
+        if not self.current_code or index < 0 or index >= len(self.current_code):
+            return False
+        
+        self._save_state()
+        # Remove the line
+        self.current_code.pop(index)
+        # Update execution order by removing the index and shifting remaining indices
+        self.execution_order = [i if i < index else i - 1 for i in self.execution_order if i != index]
+        return self._execute_contract()

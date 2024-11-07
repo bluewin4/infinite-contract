@@ -10,10 +10,9 @@ from .cards import CardLibrary, CardType, Card
 class GameConfig:
     max_turns: int = 50
     memory_window: int = 5
-    victory_conditions: Dict[str, str] = None
     card_library: CardLibrary = None
     allowed_card_types: List[CardType] = None
-    cards_per_turn: int = 3  # Number of cards to offer each turn
+    cards_per_turn: int = 3
 
 class InfiniteContractGame:
     def __init__(self, agent1: BaseAgent, agent2: BaseAgent, config: GameConfig):
@@ -23,14 +22,13 @@ class InfiniteContractGame:
         self.config = config
         self.current_player = 'agent1'
         
-        # Set victory conditions
-        agent1.victory_condition = config.victory_conditions['agent1']
-        agent2.victory_condition = config.victory_conditions['agent2']
-        
     def create_turn_prompt(self) -> str:
         """Create the prompt for current turn"""
         agent = self.agents[self.current_player]
         recent_history = self.history.get_recent_turns(self.config.memory_window)
+        
+        # Get available cards for this turn
+        self.available_cards = self._get_available_cards()
         
         return f"""
 === Infinite Contract Game - Turn {len(self.history.turns) + 1} ===
@@ -73,57 +71,48 @@ SELECTED CARD: [number]
         prompt = self.create_turn_prompt()
         response = agent.get_response(prompt)
         
-        # Process response
-        success = self._process_response(response)
+        # Extract selected card and thought process
+        selected_card = self._extract_selected_card(response)
         
-        # Switch players if successful
-        if success:
-            self.current_player = 'agent2' if self.current_player == 'agent1' else 'agent1'
+        # Apply the selected card
+        if selected_card is not None:
+            self.contract.apply_card(self.available_cards[selected_card - 1])
             
-        return not self._check_victory()
+        # Record the turn in history
+        self.history.add_turn(
+            turn_number=len(self.history.turns) + 1,
+            player_name=self.current_player,
+            thought_process=response,
+            selected_card=selected_card,
+            contract_state=self.contract.current_code,
+            variables=self.contract.variables
+        )
         
-    def _process_response(self, response: str) -> bool:
-        """Process agent's response"""
-        try:
-            # Parse response
-            scratch_pad, card_number = self._parse_response(response)
-            
-            # Get selected card from available cards
-            available_cards = self._get_available_cards()
-            if not (1 <= card_number <= len(available_cards)):
+        # Check victory conditions
+        for player_name, agent in self.agents.items():
+            if self.contract.check_victory_condition(agent.victory_condition):
+                print(f"\n{player_name} has won!")
                 return False
-            
-            card = available_cards[card_number - 1]
-            
-            # Save variables state
-            vars_before = self.contract.variables.copy()
-            
-            # Execute card
-            success = self.contract.add_line(card.code)
-            
-            # Record turn
-            self.history.add_turn(
-                player_id=self.current_player,
-                move_card=card,
-                variables_before=vars_before,
-                variables_after=self.contract.variables,
-                scratch_pad=scratch_pad,
-                success=success
-            )
-            
-            return success
-            
-        except Exception as e:
-            print(f"Error processing response: {e}")  # Add debugging
-            return False
-            
-    def _check_victory(self) -> bool:
-        """Check if current player has won"""
-        condition = self.config.victory_conditions[self.current_player]
+        
+        # Switch players
+        self._switch_players()
+        return True
+
+    def _extract_selected_card(self, response: str) -> Optional[int]:
+        """Extract the selected card number from the response"""
         try:
-            return eval(condition, {"__builtins__": {}}, self.contract.variables)
-        except Exception:
-            return False
+            parts = response.split("SELECTED CARD:")
+            if len(parts) > 1:
+                card_number = int(parts[1].strip())
+                if 1 <= card_number <= len(self.available_cards):
+                    return card_number
+            return None
+        except ValueError:
+            return None
+
+    def _switch_players(self):
+        """Switch to the next player"""
+        self.current_player = 'agent2' if self.current_player == 'agent1' else 'agent1'
 
     def _format_contract(self) -> str:
         return "\n".join(f"{i}: {line}" for i, line in enumerate(self.contract.current_code))
@@ -133,7 +122,7 @@ SELECTED CARD: [number]
 
     def _format_history(self, history) -> str:
         return "\n".join(
-            f"Turn {turn.turn_number}: Player {turn.player_id} played {turn.move_card} - Variables: {turn.variables_after}"
+            f"Turn {turn.turn_number}: Player {turn.player_name} played card {turn.selected_card} - Variables: {turn.variables}"
             for turn in history
         )
 

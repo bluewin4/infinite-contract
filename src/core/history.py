@@ -1,42 +1,44 @@
 from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
 @dataclass
 class TurnRecord:
     turn_number: int
-    player_id: str
-    timestamp: datetime
-    move_card: str
-    variables_before: Dict[str, Any]
-    variables_after: Dict[str, Any]
-    scratch_pad: str
-    success: bool
+    player_name: str
+    thought_process: str
+    selected_card: int
+    contract_state: List[str]
+    variables: Dict[str, int]
+    timestamp: datetime = datetime.now()
 
 class GameHistory:
     def __init__(self):
         self.turns: List[TurnRecord] = []
         
     def add_turn(self, 
-                 player_id: str,
-                 move_card: str,
-                 variables_before: Dict[str, Any],
-                 variables_after: Dict[str, Any],
-                 scratch_pad: str,
-                 success: bool):
-        """Add a turn to history"""
-        turn = TurnRecord(
-            turn_number=len(self.turns) + 1,
-            player_id=player_id,
-            timestamp=datetime.now(),
-            move_card=move_card,
-            variables_before=variables_before,
-            variables_after=variables_after,
-            scratch_pad=scratch_pad,
-            success=success
+                 turn_number: int,
+                 player_name: str,
+                 thought_process: str,
+                 selected_card: int,
+                 contract_state: List[str],
+                 variables: Dict[str, int]):
+        record = TurnRecord(
+            turn_number=turn_number,
+            player_name=player_name,
+            thought_process=thought_process,
+            selected_card=selected_card,
+            contract_state=contract_state.copy(),
+            variables=variables.copy()
         )
-        self.turns.append(turn)
-        
-    def get_recent_turns(self, window_size: int = 5) -> List[TurnRecord]:
-        """Get most recent turns"""
-        return self.turns[-window_size:] 
+        self.turns.append(record)
+    
+    def get_player_turns(self, player_name: str) -> List[TurnRecord]:
+        return [turn for turn in self.turns if turn.player_name == player_name]
+    
+    def get_turn(self, turn_number: int) -> Optional[TurnRecord]:
+        return next((turn for turn in self.turns if turn.turn_number == turn_number), None)
+    
+    def get_recent_turns(self, window: int) -> List[TurnRecord]:
+        """Get the most recent n turns from history"""
+        return self.turns[-window:] if self.turns else []
