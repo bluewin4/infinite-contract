@@ -2,10 +2,15 @@ from src.core.game import InfiniteContractGame, GameConfig
 from src.agents.base_agent import BaseAgent
 from src.core.cards import CardLibrary, CardType
 from src.agents.lm_agent import LMAgent
-from src.agents.lm_config import LMConfig
 import random
+from src.core.analytics import GameAnalytics
 
 class SimpleAgent(BaseAgent):
+    def __init__(self, name: str, victory_condition: str):
+        super().__init__(name)
+        self.victory_condition = victory_condition
+        self.model = "simple"
+
     def get_response(self, prompt: str) -> str:
         # Extract available cards from prompt
         cards_section = prompt.split("Available Cards:")[1].split("Your Strategy Notes")[0]
@@ -26,8 +31,6 @@ def create_game_config() -> GameConfig:
     card_library = CardLibrary()
     
     return GameConfig(
-        max_turns=50,
-        memory_window=5,
         card_library=card_library,
         allowed_card_types=[
             CardType.AGGRESSIVE, 
@@ -39,6 +42,9 @@ def create_game_config() -> GameConfig:
     )
 
 def main():
+    # Create analytics instance
+    analytics = GameAnalytics(storage_path="game_data")
+    
     # Define victory conditions
     agent1_goal = "x >= 10"
     
@@ -46,33 +52,42 @@ def main():
     config = create_game_config()
     
     # Create agents with explicit goals
-    agent1 = LMAgent(
+    # agent1 = LMAgent(
+    #     name="Player 1",
+    #     model="claude-3-haiku-20240307",
+    #     victory_condition=agent1_goal,
+    #     temperature=0.7,
+    #     max_tokens=500
+    # )
+    
+    # agent2 = LMAgent(
+    #     name="Player 2",
+    #     model="claude-3-haiku-20240307",
+    #     victory_condition=agent1_goal,
+    #     temperature=0.8,
+    #     max_tokens=500
+    # )
+
+    agent1 = SimpleAgent(
         name="Player 1",
-        model="claude-3-haiku-20240307",
-        victory_condition=agent1_goal,
-        temperature=0.7,
-        max_tokens=500
+        victory_condition=agent1_goal
     )
     
-    agent2 = LMAgent(
-        name="Player 2",
-        model="claude-3-haiku-20240307",
-        victory_condition=agent1_goal,
-        temperature=0.8,
-        max_tokens=500
+    agent2 = SimpleAgent(
+        name="Player 2", 
+        victory_condition=agent1_goal
     )
     
     # Create and run game
     game = InfiniteContractGame(agent1, agent2, config)
+    game.analytics = analytics  # Set analytics explicitly
     run_game_with_logging(game, config.max_turns)
 
 def run_game_with_logging(game: InfiniteContractGame, max_turns: int):
-    turn_count = 0
-    while game.play_turn() and turn_count < max_turns:
-        turn_count += 1
-        current_turn = game.history.get_turn(turn_count)
+    while game.turn_count < max_turns and game.play_turn():
+        current_turn = game.history.turns[-1]
         
-        print(f"\n=== Turn {turn_count} ===")
+        print(f"\n=== Turn {current_turn.turn_number} ===")
         print(f"Player: {current_turn.player_name}")
         print(f"Thought Process:\n{current_turn.thought_process}")
         print(f"Contract:\n{current_turn.contract_state}")

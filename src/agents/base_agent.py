@@ -4,9 +4,9 @@ from typing import List, Dict, Any
 class BaseAgent(ABC):
     """Base class for game agents"""
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, victory_condition: str = ""):
         self.name = name
-        self.victory_condition: str = ""
+        self.victory_condition = victory_condition
         self.strategy_notes: List[str] = []
 
     @abstractmethod

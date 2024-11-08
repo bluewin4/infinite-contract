@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 class CardType(Enum):
     AGGRESSIVE = "aggressive"
@@ -178,4 +178,85 @@ class CardLibrary:
             code="y -= 1",
             card_type=CardType.DEFENSIVE,
             complexity=1
-        )) 
+        ))
+        
+        self.add_card(Card(
+            id="op_increment_z_2",
+            name="Double Increment Z",
+            description="Add 2 to z",
+            code="z += 2",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+
+        self.add_card(Card(
+            id="op_decrement_z_2",
+            name="Double Decrement Z",
+            description="Subtract 2 from z",
+            code="z -= 2",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+
+        self.add_card(Card(
+            id="op_triple_z",
+            name="Triple Z",
+            description="Multiply z by 3",
+            code="z *= 3",
+            card_type=CardType.STRATEGIC,
+            complexity=3
+        ))
+
+        self.add_card(Card(
+            id="op_third_z",
+            name="Third Z",
+            description="Divide z by 3",
+            code="z //= 3",
+            card_type=CardType.STRATEGIC,
+            complexity=3
+        ))
+
+        self.add_card(Card(
+            id="op_square_z",
+            name="Square Z",
+            description="Square the value of z",
+            code="z = z * z",
+            card_type=CardType.STRATEGIC,
+            complexity=3
+        ))
+
+        self.add_card(Card(
+            id="op_abs_x",
+            name="Absolute X",
+            description="Get absolute value of x",
+            code="x = abs(x)",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+
+        self.add_card(Card(
+            id="op_abs_y",
+            name="Absolute Y",
+            description="Get absolute value of y",
+            code="y = abs(y)",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+
+        self.add_card(Card(
+            id="op_abs_z",
+            name="Absolute Z",
+            description="Get absolute value of z",
+            code="z = abs(z)",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+
+    def get_card_by_id(self, card_id: int) -> Optional[Card]:
+        """Get card by its ID"""
+        for card_type in CardType:
+            cards = self.get_cards_by_type(card_type)
+            for card in cards:
+                if card.id == card_id:
+                    return card
+        return None

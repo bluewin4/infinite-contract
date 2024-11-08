@@ -57,6 +57,9 @@ def test_card_library_initialization():
     
     # Utility operations
     ("util_reset_z", "x >= 10", {"x": 1, "y": 1, "z": 0}),  # Only z gets reset to 0
+    ("op_abs_x", "x >= 10", {"x": 1, "y": 1, "z": 1}),  # abs(1) = 1
+    ("op_abs_y", "x >= 10", {"x": 1, "y": 1, "z": 1}),  # abs(1) = 1
+    ("op_abs_z", "x >= 10", {"x": 1, "y": 1, "z": 1}),  # abs(1) = 1
 ])
 def test_individual_card_execution(card_id, victory_condition, expected_vars):
     library = CardLibrary()
@@ -160,3 +163,25 @@ def test_victory_condition():
         game.contract.apply_card(decrement_y)
     
     assert game.contract.check_victory_condition("y <= -3")
+
+def test_absolute_value_cards():
+    library = CardLibrary()
+    game = create_test_game(victory_condition="x >= 10")
+    
+    # Set up negative values
+    game.contract.variables = {'x': -5, 'y': -3, 'z': -7}
+    
+    # Test abs(x)
+    abs_x_card = library.get_card("op_abs_x")
+    game.contract.apply_card(abs_x_card)
+    assert game.contract.variables['x'] == 5
+    
+    # Test abs(y)
+    abs_y_card = library.get_card("op_abs_y")
+    game.contract.apply_card(abs_y_card)
+    assert game.contract.variables['y'] == 3
+    
+    # Test abs(z)
+    abs_z_card = library.get_card("op_abs_z")
+    game.contract.apply_card(abs_z_card)
+    assert game.contract.variables['z'] == 7
