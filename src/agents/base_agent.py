@@ -4,9 +4,10 @@ from typing import List, Dict, Any
 class BaseAgent(ABC):
     """Base class for game agents"""
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, victory_condition: str = "", target_var: str = "x"):
         self.name = name
-        self.victory_condition: str = ""
+        self.victory_condition = victory_condition
+        self.target_var = target_var
         self.strategy_notes: List[str] = []
 
     @abstractmethod
@@ -18,6 +19,10 @@ class BaseAgent(ABC):
         """Update agent's memory with turn results"""
         if 'scratch_pad' in turn_result:
             self.strategy_notes.append(turn_result['scratch_pad'])
+
+    def add_strategy_note(self, note: str):
+        """Add a note to agent's strategy notes"""
+        self.strategy_notes.append(note)
 
 class SimpleAgent(BaseAgent):
     """A simple agent that makes random valid moves"""

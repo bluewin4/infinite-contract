@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 
 from .contract import CodeContract
@@ -11,8 +11,8 @@ class GameConfig:
     max_turns: int = 50
     memory_window: int = 5
     card_library: CardLibrary = None
-    allowed_card_types: List[CardType] = None
     cards_per_turn: int = 3
+    get_allowed_cards: Callable[[str], List[CardType]] = None
 
 class InfiniteContractGame:
     def __init__(self, agent1: BaseAgent, agent2: BaseAgent, config: GameConfig):
@@ -135,9 +135,15 @@ SELECTED CARD: [number]
         return "\n".join(notes[-self.config.memory_window:])
 
     def _get_available_cards(self) -> List[Card]:
+        """Get available cards for the current player"""
+        agent = self.agents[self.current_player]
+        # Get allowed card types based on the player's target variable
+        allowed_types = self.config.get_allowed_cards(agent.target_var)
+        
         all_cards = []
-        for card_type in self.config.allowed_card_types:
+        for card_type in allowed_types:
             all_cards.extend(self.config.card_library.get_cards_by_type(card_type))
+            
         # Randomly select cards_per_turn number of cards
         import random
         return random.sample(all_cards, min(len(all_cards), self.config.cards_per_turn))

@@ -45,12 +45,16 @@ class LMAgent(BaseAgent):
         ]
         
         try:
+            # Remove any model-specific kwargs that might not be supported
+            kwargs = {k: v for k, v in self.model_kwargs.items() 
+                      if k in ['temperature', 'max_tokens']}
+            
             response = completion(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                **self.model_kwargs
+                **kwargs
             )
             
             return response.choices[0].message.content

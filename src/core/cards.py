@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from typing import List
 
 class CardType(Enum):
-    AGGRESSIVE = "aggressive"
-    DEFENSIVE = "defensive"
+    AGGRESSIVE_X = "aggressive_x"
+    AGGRESSIVE_Y = "aggressive_y"
+    DEFENSIVE_X = "defensive_x"
+    DEFENSIVE_Y = "defensive_y"
     STRATEGIC = "strategic"
     UTILITY = "utility"
 
@@ -32,13 +34,13 @@ class CardLibrary:
         return [card for card in self.cards.values() if card.card_type == card_type]
         
     def _initialize_cards(self):
-        # Basic Operations - Categorized based on effect
+        # X-focused cards
         self.add_card(Card(
             id="op_increment_x",
             name="Increment X",
             description="Add 1 to x",
             code="x += 1",
-            card_type=CardType.AGGRESSIVE,
+            card_type=CardType.AGGRESSIVE_X,
             complexity=1
         ))
         
@@ -47,7 +49,26 @@ class CardLibrary:
             name="Decrement X",
             description="Subtract 1 from x",
             code="x -= 1",
-            card_type=CardType.DEFENSIVE,
+            card_type=CardType.DEFENSIVE_X,
+            complexity=1
+        ))
+        
+        # Y-focused cards
+        self.add_card(Card(
+            id="op_increment_y",
+            name="Increment Y",
+            description="Add 1 to y",
+            code="y += 1",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=1
+        ))
+        
+        self.add_card(Card(
+            id="op_decrement_y",
+            name="Decrement Y",
+            description="Subtract 1 from y",
+            code="y -= 1",
+            card_type=CardType.DEFENSIVE_Y,
             complexity=1
         ))
         
@@ -56,7 +77,16 @@ class CardLibrary:
             name="Double X",
             description="Multiply x by 2",
             code="x *= 2",
-            card_type=CardType.AGGRESSIVE,
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_double_y",
+            name="Double Y",
+            description="Multiply y by 2",
+            code="y *= 2",
+            card_type=CardType.AGGRESSIVE_Y,
             complexity=2
         ))
         
@@ -65,10 +95,19 @@ class CardLibrary:
             name="Halve X",
             description="Divide x by 2",
             code="x //= 2",
-            card_type=CardType.DEFENSIVE,
+            card_type=CardType.DEFENSIVE_X,
             complexity=2
         ))
         
+        self.add_card(Card(
+            id="op_halve_y",
+            name="Halve Y",
+            description="Divide y by 2",
+            code="y //= 2",
+            card_type=CardType.DEFENSIVE_Y,
+            complexity=2
+        ))
+
         # Variable Transfers - Strategic moves
         self.add_card(Card(
             id="transfer_x_to_y",
@@ -87,13 +126,23 @@ class CardLibrary:
             card_type=CardType.STRATEGIC,
             complexity=1
         ))
-        
+
+        # Z-related operations remain UTILITY type since they're neutral storage
         self.add_card(Card(
             id="transfer_x_to_z",
             name="X to Z",
             description="Set z equal to x",
             code="z = x",
-            card_type=CardType.STRATEGIC,
+            card_type=CardType.UTILITY,
+            complexity=1
+        ))
+        
+        self.add_card(Card(
+            id="transfer_y_to_z",
+            name="Y to Z",
+            description="Set z equal to y",
+            code="z = y",
+            card_type=CardType.UTILITY,
             complexity=1
         ))
         
@@ -101,8 +150,8 @@ class CardLibrary:
             id="transfer_z_to_x",
             name="Z to X",
             description="Set x equal to z",
-            code="x = z",
-            card_type=CardType.STRATEGIC,
+            code="z = x",
+            card_type=CardType.UTILITY,
             complexity=1
         ))
         
@@ -111,11 +160,11 @@ class CardLibrary:
             name="Z to Y",
             description="Set y equal to z",
             code="y = z",
-            card_type=CardType.STRATEGIC,
+            card_type=CardType.UTILITY,
             complexity=1
         ))
-        
-        # Utility operations
+
+        # Contract manipulation cards remain as UTILITY
         self.add_card(Card(
             id="util_reset_z",
             name="Reset Z",
@@ -125,7 +174,6 @@ class CardLibrary:
             complexity=1
         ))
         
-        # Contract manipulation cards
         self.add_card(Card(
             id="util_pop",
             name="Remove Last Line",
@@ -169,13 +217,4 @@ class CardLibrary:
             code="__contract__.optimize()",
             card_type=CardType.UTILITY,
             complexity=2
-        ))
-        
-        self.add_card(Card(
-            id="op_decrement_y",
-            name="Decrement Y",
-            description="Subtract 1 from y",
-            code="y -= 1",
-            card_type=CardType.DEFENSIVE,
-            complexity=1
         )) 
