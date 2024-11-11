@@ -97,10 +97,30 @@ class CodeContract:
         temp_vars = self.variables.copy()
         
         try:
+            # Create restricted globals and locals
+            restricted_globals = {
+                "__builtins__": {},  # Empty builtins for security
+            }
+            
             # Execute each line in order
             for idx in self.execution_order:
                 if idx < len(self.current_code):
-                    exec(self.current_code[idx], {"__builtins__": {}}, temp_vars)
+                    # Parse the code to check for valid variable assignments
+                    try:
+                        tree = ast.parse(self.current_code[idx])
+                        for node in ast.walk(tree):
+                            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                                # Only allow assignments to x, y, z
+                                if node.id not in ['x', 'y', 'z']:
+                                    return False
+                    except SyntaxError:
+                        return False
+                    
+                    # Execute the line if validation passes
+                    exec(self.current_code[idx], restricted_globals, temp_vars)
+                    
+                    # Only keep allowed variables
+                    temp_vars = {k: v for k, v in temp_vars.items() if k in ['x', 'y', 'z']}
             
             self.variables = temp_vars
             return True
