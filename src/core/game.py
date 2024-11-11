@@ -21,6 +21,7 @@ class InfiniteContractGame:
         self.agents = {'agent1': agent1, 'agent2': agent2}
         self.config = config
         self.current_player = 'agent1'
+        self.current_code = []  # Track the current turn's code
         
     def create_turn_prompt(self) -> str:
         """Create the prompt for current turn"""
@@ -74,9 +75,13 @@ SELECTED CARD: [number]
         # Extract selected card and thought process
         selected_card = self._extract_selected_card(response)
         
-        # Apply the selected card
+        # Apply the selected card and update contract state
         if selected_card is not None:
-            self.contract.apply_card(self.available_cards[selected_card - 1])
+            selected_card_obj = self.available_cards[selected_card - 1]
+            # Apply the new card to existing contract
+            self.contract.apply_card(selected_card_obj)
+            # Execute the full contract
+            self.contract._execute_contract()
             
         # Record the turn in history
         self.history.add_turn(
@@ -84,8 +89,8 @@ SELECTED CARD: [number]
             player_name=self.current_player,
             thought_process=response,
             selected_card=selected_card,
-            contract_state=self.contract.current_code,
-            variables=self.contract.variables
+            contract_state=self.contract.current_code.copy(),
+            variables=dict(self.contract.variables)
         )
         
         # Check victory conditions

@@ -140,9 +140,14 @@ class CodeContract:
                 self._invert_execution_order()
         else:
             # Handle regular code cards
-            self.add_line(card.code)
-            # Execute the entire contract after adding the line
-            self._execute_contract()
+            self._save_state()  # Save state before modification
+            self.current_code.append(card.code)  # Add the new line
+            self.execution_order.append(len(self.current_code) - 1)  # Add to execution order
+            
+            # Execute the contract immediately after adding the line
+            success = self._execute_contract()
+            if not success:
+                self._restore_state()  # Restore previous state if execution fails
 
     def check_victory_condition(self, condition: str) -> bool:
         """Check if the victory condition is met"""
@@ -176,6 +181,8 @@ class CodeContract:
         self._save_state()
         self.current_code = []
         self.execution_order = []
+        # Reset variables to initial state
+        self.variables = {'x': 1, 'y': 1, 'z': 1}
         return True
 
     def _invert_execution_order(self) -> bool:
