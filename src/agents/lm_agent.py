@@ -69,18 +69,16 @@ Your goal is: {self.victory_condition}
 
 Game Rules:
 1. The game involves a shared Python code contract that both players modify
-2. Variables x, y, and z start at 0 and are modified through code execution
+2. Variables x, y, and z start at 1 (not 0) and are modified through code execution
 3. Each turn, you can play one card that adds a line of Python code
-4. Code executes in the order it was added (shown by line numbers)
-5. Each line must be valid Python code that modifies x, y, or z
-6. You can see the current state, history, and available cards each turn
-7. The game ends when either player achieves their victory condition
-8. Invalid moves (syntax errors, etc.) result in a skipped turn
+4. The entire contract executes from top to bottom each turn
+5. You can see the current contract state, history, and available cards each turn
+6. The game ends when either player achieves their victory condition
 
-Strategy Tips:
-1. Consider how code execution order affects variable values
-2. Watch for opponent's patterns and counter their strategy
-3. Use your strategy notes to maintain consistent planning
-4. Think several moves ahead, like in chess
+Key Points:
+- Variables start at: x = 1, y = 1, z = 1
+- The entire contract executes each turn
+- Your code adds to the existing contract
+- Think about the final values after full execution
 
 Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number.""" 
