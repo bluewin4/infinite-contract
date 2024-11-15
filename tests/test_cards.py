@@ -214,3 +214,31 @@ def test_invert_with_complex_operations():
     # 2. y = x      (y: 1 -> 2)
     # 3. x = x + 1  (x: 2 -> 3)
     assert contract.variables == {'x': 3, 'y': 2, 'z': 1}
+
+def test_card_frequency():
+    library = CardLibrary()
+    
+    # Set different frequencies
+    library.set_card_frequency("op_increment_x", 5.0)  # Very common
+    library.set_card_frequency("util_clear", 0.1)     # Very rare
+    
+    # Sample cards multiple times
+    samples = []
+    for _ in range(100):
+        config = GameConfig(
+            max_turns=10,
+            memory_window=5,
+            card_library=library,
+            get_allowed_cards=lambda _: [CardType.AGGRESSIVE_X, CardType.UTILITY],
+            cards_per_turn=1
+        )
+        game = create_test_game()
+        cards = game._get_available_cards()
+        samples.extend(cards)
+    
+    # Count occurrences
+    increment_count = sum(1 for card in samples if card.id == "op_increment_x")
+    clear_count = sum(1 for card in samples if card.id == "util_clear")
+    
+    # Check that higher frequency cards appear more often
+    assert increment_count > clear_count * 3  # Should be significantly more common

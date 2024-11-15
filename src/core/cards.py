@@ -18,6 +18,7 @@ class Card:
     code: str
     card_type: CardType
     complexity: int
+    frequency: float = 1.0  # Default frequency weight of 1.0
 
 class CardLibrary:
     def __init__(self):
@@ -41,7 +42,8 @@ class CardLibrary:
             description="Add 1 to x",
             code="x += 1",
             card_type=CardType.AGGRESSIVE_X,
-            complexity=1
+            complexity=1,
+            frequency=5.0
         ))
         
         self.add_card(Card(
@@ -50,7 +52,8 @@ class CardLibrary:
             description="Subtract 1 from x",
             code="x -= 1",
             card_type=CardType.DEFENSIVE_X,
-            complexity=1
+            complexity=1,
+            frequency=5.0
         ))
         
         # Y-focused cards
@@ -60,7 +63,8 @@ class CardLibrary:
             description="Add 1 to y",
             code="y += 1",
             card_type=CardType.AGGRESSIVE_Y,
-            complexity=1
+            complexity=1,
+            frequency=5.0
         ))
         
         self.add_card(Card(
@@ -69,7 +73,8 @@ class CardLibrary:
             description="Subtract 1 from y",
             code="y -= 1",
             card_type=CardType.DEFENSIVE_Y,
-            complexity=1
+            complexity=1,
+            frequency=5.0
         ))
         
         self.add_card(Card(
@@ -78,7 +83,8 @@ class CardLibrary:
             description="Multiply x by 2",
             code="x *= 2",
             card_type=CardType.AGGRESSIVE_X,
-            complexity=2
+            complexity=2,
+            frequency=2.0
         ))
         
         self.add_card(Card(
@@ -87,7 +93,8 @@ class CardLibrary:
             description="Multiply y by 2",
             code="y *= 2",
             card_type=CardType.AGGRESSIVE_Y,
-            complexity=2
+            complexity=2,
+            frequency=2.0
         ))
         
         self.add_card(Card(
@@ -96,7 +103,8 @@ class CardLibrary:
             description="Divide x by 2",
             code="x //= 2",
             card_type=CardType.DEFENSIVE_X,
-            complexity=2
+            complexity=2,
+            frequency=2.0
         ))
         
         self.add_card(Card(
@@ -105,7 +113,8 @@ class CardLibrary:
             description="Divide y by 2",
             code="y //= 2",
             card_type=CardType.DEFENSIVE_Y,
-            complexity=2
+            complexity=2,
+            frequency=2.0
         ))
 
         # Variable Transfers - Strategic moves
@@ -115,7 +124,8 @@ class CardLibrary:
             description="Set y equal to x",
             code="y = x",
             card_type=CardType.STRATEGIC,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -124,7 +134,8 @@ class CardLibrary:
             description="Set x equal to y",
             code="x = y",
             card_type=CardType.STRATEGIC,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
 
         # Z-related operations remain UTILITY type since they're neutral storage
@@ -134,7 +145,8 @@ class CardLibrary:
             description="Set z equal to x",
             code="z = x",
             card_type=CardType.UTILITY,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -143,7 +155,8 @@ class CardLibrary:
             description="Set z equal to y",
             code="z = y",
             card_type=CardType.UTILITY,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -152,7 +165,8 @@ class CardLibrary:
             description="Set x equal to z",
             code="z = x",
             card_type=CardType.UTILITY,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -161,7 +175,8 @@ class CardLibrary:
             description="Set y equal to z",
             code="y = z",
             card_type=CardType.UTILITY,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
 
         # Contract manipulation cards remain as UTILITY
@@ -171,7 +186,8 @@ class CardLibrary:
             description="Reset z to 0",
             code="z = 0",
             card_type=CardType.UTILITY,
-            complexity=1
+            complexity=1,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -180,7 +196,8 @@ class CardLibrary:
             description="Remove the last line from the contract",
             code="__contract__.pop()",
             card_type=CardType.UTILITY,
-            complexity=2
+            complexity=2,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -189,7 +206,8 @@ class CardLibrary:
             description="Remove all lines from the contract",
             code="__contract__.clear()",
             card_type=CardType.UTILITY,
-            complexity=3
+            complexity=3,
+            frequency=0.5
         ))
         
         self.add_card(Card(
@@ -198,23 +216,40 @@ class CardLibrary:
             description="Reverse the order of contract execution",
             code="__contract__.invert()",
             card_type=CardType.UTILITY,
-            complexity=3
+            complexity=3,
+            frequency=0.5
         ))
         
-        self.add_card(Card(
-            id="util_clean",
-            name="Clean Contract",
-            description="Remove inactive lines from the contract",
-            code="__contract__.clean()",
-            card_type=CardType.UTILITY,
-            complexity=2
-        ))
+        # self.add_card(Card(
+        #     id="util_clean",
+        #     name="Clean Contract",
+        #     description="Remove inactive lines from the contract",
+        #     code="__contract__.clean()",
+        #     card_type=CardType.UTILITY,
+        #     complexity=2,
+        #     frequency=0.5
+        # ))
         
-        self.add_card(Card(
-            id="util_optimize",
-            name="Optimize Contract",
-            description="Optimize the execution order",
-            code="__contract__.optimize()",
-            card_type=CardType.UTILITY,
-            complexity=2
-        )) 
+        # self.add_card(Card(
+        #     id="util_optimize",
+        #     name="Optimize Contract",
+        #     description="Optimize the execution order",
+        #     code="__contract__.optimize()",
+        #     card_type=CardType.UTILITY,
+        #     complexity=2,
+        #     frequency=0.5
+        # )) 
+
+    def set_card_frequency(self, card_id: str, frequency: float) -> bool:
+        """Set the frequency weight for a specific card"""
+        if card_id in self.cards:
+            self.cards[card_id].frequency = max(0.0, frequency)  # Ensure non-negative
+            return True
+        return False
+
+    def set_type_frequency(self, card_type: CardType, frequency: float) -> None:
+        """Set the frequency weight for all cards of a specific type"""
+        for card in self.cards.values():
+            if card.card_type == card_type:
+                card.frequency = max(0.0, frequency)
+ 

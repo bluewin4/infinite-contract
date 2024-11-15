@@ -1,0 +1,54 @@
+{
+    "Player 1_simpleagent": {
+        "name": "Player 1",
+        "model_type": "simpleagent",
+        "model_params": {},
+        "stats": {
+            "total_games": 2,
+            "games_won": 0,
+            "avg_turns_to_win": 0,
+            "favorite_card_types": {},
+            "victory_conditions": {}
+        },
+        "game_history": [
+            {
+                "winner": "Draw",
+                "total_turns": 5,
+                "victory_condition": "Game ended in draw",
+                "timestamp": "2024-11-11T06:53:21.908746"
+            },
+            {
+                "winner": "Draw",
+                "total_turns": 5,
+                "victory_condition": "Game ended in draw",
+                "timestamp": "2024-11-11T06:56:11.997928"
+            }
+        ]
+    },
+    "Player 2_simpleagent": {
+        "name": "Player 2",
+        "model_type": "simpleagent",
+        "model_params": {},
+        "stats": {
+            "total_games": 2,
+            "games_won": 0,
+            "avg_turns_to_win": 0,
+            "favorite_card_types": {},
+            "victory_conditions": {}
+        },
+        "game_history": [
+            {
+                "winner": "Draw",
+                "total_turns": 5,
+                "victory_condition": "Game ended in draw",
+                "timestamp": "2024-11-11T06:53:21.908746"
+            },
+            {
+                "winner": "Draw",
+                "total_turns": 5,
+                "victory_condition": "Game ended in draw",
+                "timestamp": "2024-11-11T06:56:11.997928"
+            }
+        ]
+    }
+}

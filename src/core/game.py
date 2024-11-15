@@ -5,6 +5,7 @@ from .contract import CodeContract
 from .history import GameHistory
 from ..agents.base_agent import BaseAgent
 from .cards import CardLibrary, CardType, Card
+import random
 
 @dataclass
 class GameConfig:
@@ -140,7 +141,7 @@ SELECTED CARD: [number]
         return "\n".join(notes[-self.config.memory_window:])
 
     def _get_available_cards(self) -> List[Card]:
-        """Get available cards for the current player"""
+        """Get available cards for the current player using weighted selection"""
         agent = self.agents[self.current_player]
         # Get allowed card types based on the player's target variable
         allowed_types = self.config.get_allowed_cards(agent.target_var)
@@ -149,9 +150,15 @@ SELECTED CARD: [number]
         for card_type in allowed_types:
             all_cards.extend(self.config.card_library.get_cards_by_type(card_type))
             
-        # Randomly select cards_per_turn number of cards
-        import random
-        return random.sample(all_cards, min(len(all_cards), self.config.cards_per_turn))
+        # Get weights for available cards
+        weights = [card.frequency for card in all_cards]
+        
+        # Use weighted random sampling
+        return random.choices(
+            all_cards, 
+            weights=weights, 
+            k=min(len(all_cards), self.config.cards_per_turn)
+        )
 
     def _parse_response(self, response: str) -> tuple[str, int]:
         """Parse agent response into scratch pad and card number"""

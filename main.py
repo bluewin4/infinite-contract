@@ -46,7 +46,7 @@ def create_game_config() -> GameConfig:
             ]
     
     return GameConfig(
-        max_turns=3,
+        max_turns=25,
         memory_window=5,
         card_library=card_library,
         get_allowed_cards=get_allowed_cards,

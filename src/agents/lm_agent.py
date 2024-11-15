@@ -71,7 +71,7 @@ Game Rules:
 1. The game involves a shared Python code contract that both players modify
 2. Variables x, y, and z start at 1 (not 0) and are modified through code execution
 3. Each turn, you can play one card that adds a line of Python code
-4. The entire contract executes from top to bottom each turn
+4. The entire contract executes from left to right each turn
 5. You can see the current contract state, history, and available cards each turn
 6. The game ends when either player achieves their victory condition
 
