@@ -68,11 +68,12 @@ def main():
     # Create game configuration
     config = create_game_config()
     
-    # Create LM agents
+    # Create LM agents with personalities
     agent1 = LMAgent(
         name="Player 1",
         model="claude-3-haiku-20240307",
         victory_condition=agent1_config['victory_condition'],
+        personality="You are a chaotic and unpredictable player who loves taking risks. You get excited by making bold moves and often express your enthusiasm with multiple exclamation marks!!!",
         temperature=0.7,
         max_tokens=500
     )
@@ -81,6 +82,7 @@ def main():
         name="Player 2",
         model="claude-3-haiku-20240307",
         victory_condition=agent2_config['victory_condition'],
+        personality="You are a meticulous chess grandmaster who carefully analyzes every possible outcome. You speak in a formal, analytical tone and always consider multiple moves ahead.",
         temperature=0.8,
         max_tokens=500
     )

@@ -6,12 +6,14 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
+import hashlib
 
 class LMAgent(BaseAgent):
     def __init__(self, 
                  name: str, 
                  model: str, 
                  victory_condition: str, 
+                 personality: Optional[str] = None,
                  system_prompt: Optional[str] = None,
                  temperature: float = 0.7,
                  max_tokens: int = 500,
@@ -26,6 +28,7 @@ class LMAgent(BaseAgent):
             
         super().__init__(name, victory_condition)
         self.model = model
+        self.personality = personality
         self.system_prompt = system_prompt or self._create_system_prompt()
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -49,11 +52,14 @@ class LMAgent(BaseAgent):
         else:
             profiles = {}
         
+        # Create unique agent ID including personality hash
+        agent_id = self._generate_agent_id()
+        
         # Create agent profile if it doesn't exist
-        agent_id = f"{self.name}_lmagent"
         if agent_id not in profiles:
             profiles[agent_id] = {
                 "name": self.name,
+                "personality": self.personality,
                 "model_type": "lmagent",
                 "model_params": {
                     "model": self.model,
@@ -67,6 +73,12 @@ class LMAgent(BaseAgent):
                     "avg_turns_to_win": 0,
                     "favorite_card_types": {},
                     "victory_conditions": [],
+                    "personality_traits": {
+                        "aggression": 0.0,
+                        "defensiveness": 0.0,
+                        "strategy_depth": 0.0,
+                        "adaptability": 0.0
+                    },
                     "card_type_stats": {
                         "aggressive": 0,
                         "defensive": 0,
@@ -77,10 +89,12 @@ class LMAgent(BaseAgent):
                 },
                 "game_history": []
             }
-            
-            # Save updated profiles
-            with open(profiles_path, 'w') as f:
-                json.dump(profiles, f, indent=4)
+        
+        # Always save the profile
+        with open(profiles_path, 'w') as f:
+            json.dump(profiles, f, indent=4)
+        
+        return profiles[agent_id]
 
     def _check_api_keys(self, model: str):
         """Check for required API keys based on model provider"""
@@ -116,8 +130,12 @@ class LMAgent(BaseAgent):
             raise RuntimeError(f"Error getting LLM response: {str(e)}")
 
     def _create_system_prompt(self) -> str:
+        personality_prompt = ""
+        if self.personality:
+            personality_prompt = f"\nYou are roleplaying with the following personality traits: {self.personality}\nMake your decisions and express your thoughts in alignment with this personality.\n"
+        
         return f"""You are playing the Infinite Contract Game as {self.name}. 
-Your goal is: {self.victory_condition}
+Your goal is: {self.victory_condition}{personality_prompt}
 
 Game Rules:
 1. The game involves a shared Python code contract that both players modify
@@ -133,7 +151,8 @@ Key Points:
 - Your code adds to the existing contract
 - Think about the final values after full execution
 
-Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number."""
+Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number.
+Express your personality in your SCRATCH PAD section."""
 
     def update_profile(self, game_result: Dict[str, Any]):
         storage_path = Path(os.getenv("STORAGE_PATH", "storage"))
@@ -142,58 +161,61 @@ Remember: Always format your response exactly as shown in the prompt, with a SCR
         with open(profiles_path) as f:
             profiles = json.load(f)
         
-        agent_id = f"{self.name}_lmagent"
+        agent_id = self._generate_agent_id()
         profile = profiles[agent_id]
         
-        # Update basic stats
+        # Update game stats
         profile["stats"]["total_games"] += 1
-        wins = profile["stats"]["games_won"]
         
         if game_result["winner"] == self.name:
-            wins += 1
-            profile["stats"]["games_won"] = wins
-            # Update average turns to win
-            current_avg = profile["stats"]["avg_turns_to_win"]
-            profile["stats"]["avg_turns_to_win"] = round(
-                (current_avg * (wins - 1) + game_result["total_turns"]) / wins
+            profile["stats"]["games_won"] += 1
+            profile["stats"]["win_rate"] = round(
+                profile["stats"]["games_won"] / profile["stats"]["total_games"], 3
             )
+            
+            # Track victory condition
+            victory_condition = game_result["victory_condition"]
+            if victory_condition not in profile["stats"]["victory_conditions"]:
+                profile["stats"]["victory_conditions"].append(victory_condition)
         
-        # Calculate win rate
-        profile["stats"]["win_rate"] = round(wins / profile["stats"]["total_games"], 3)
+        # Update card type stats from turn history
+        if "turn_history" in game_result:
+            game_cards = {
+                "aggressive": 0,
+                "defensive": 0,
+                "strategic": 0,
+                "utility": 0
+            }
+            
+            for turn in game_result["turn_history"]:
+                if turn.get("player") == self.name and turn.get("success", False):
+                    card_type = turn.get("card_type", "").lower()
+                    if card_type in game_cards:
+                        game_cards[card_type] += 1
+                        profile["stats"]["card_type_stats"][card_type] += 1
+            
+            # Add per-game card usage
+            profile["stats"]["card_type_stats"]["cards_per_game"].append(game_cards)
         
-        # Add game to history
-        game_summary = {
+        # Create game history entry
+        game_history_entry = {
             "timestamp": datetime.now().isoformat(),
             "total_turns": game_result["total_turns"],
             "winner": game_result["winner"],
-            "victory_condition": game_result["victory_condition"]
+            "victory_condition": game_result["victory_condition"],
+            "card_usage": game_cards if "turn_history" in game_result else {}
         }
+        
+        # Append to game history
         if "game_history" not in profile:
             profile["game_history"] = []
-        profile["game_history"].append(game_summary)
-        
-        # Process card usage from turn history
-        game_cards = {
-            "aggressive": 0,
-            "defensive": 0,
-            "strategic": 0,
-            "utility": 0
-        }
-        
-        for turn in game_result["turn_history"]:
-            if turn["player"] == self.name and turn["card_type"] is not None:
-                card_type = turn["card_type"].lower()
-                if card_type in game_cards:
-                    game_cards[card_type] += 1
-                
-        # Update card type stats
-        stats = profile["stats"]["card_type_stats"]
-        for category in game_cards:
-            stats[category] += game_cards[category]
-        
-        # Add per-game card usage
-        stats["cards_per_game"].append(game_cards)
+        profile["game_history"].append(game_history_entry)
         
         # Save updated profiles
         with open(profiles_path, 'w') as f:
             json.dump(profiles, f, indent=4)
+
+    def _generate_agent_id(self) -> str:
+        """Generate a unique agent ID based on name, personality, model, and temperature"""
+        personality_hash = hashlib.md5(str(self.personality).encode()).hexdigest()[:8]
+        return f"{self.name}_{personality_hash}_{self.model}_{self.temperature}"

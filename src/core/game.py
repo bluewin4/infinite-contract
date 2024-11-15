@@ -106,7 +106,7 @@ SELECTED CARD: [number]
             turn_data = {
                 "player": agent.name,
                 "turn_number": len(self.history.turns) + 1,
-                "card_type": selected_card.card_type.value.split('_')[0].lower(),
+                "card_type": selected_card.card_type.value.lower(),
                 "card_id": selected_card.id,
                 "success": True
             }
@@ -121,20 +121,8 @@ SELECTED CARD: [number]
                     contract_state=self.contract.current_code,
                     variables=self.contract.variables.copy()
                 )
-            
-        except ValueError as e:
-            # Handle parsing errors specifically
-            turn_data = {
-                "player": agent.name,
-                "turn_number": len(self.history.turns) + 1,
-                "error": str(e),
-                "success": False,
-                "card_type": None,
-                "card_id": None
-            }
-            
         except Exception as e:
-            # Handle other errors
+            # Handle errors
             turn_data = {
                 "player": agent.name,
                 "turn_number": len(self.history.turns) + 1,
@@ -162,19 +150,16 @@ SELECTED CARD: [number]
         if len(self.history.turns) >= self.config.max_turns:
             self.game_over = True
             self._game_result["victory_condition"] = "Game ended due to max turns reached"
+            self._update_agent_profiles()
             return False
         
         self.check_victory_conditions()
-        
-        # Update profiles if game is over
         if self.game_over:
             self._update_agent_profiles()
         
-        # Switch players if game isn't over
-        if not self.game_over:
-            self.current_player = 'agent2' if self.current_player == 'agent1' else 'agent1'
-        
-        return not self.game_over
+        # Switch players and continue
+        self._switch_players()
+        return True
 
     def _extract_selected_card(self, response: str) -> Optional[int]:
         """Extract the selected card number from the response"""
@@ -270,7 +255,8 @@ SELECTED CARD: [number]
                 if self.winner 
                 else "Game ended in draw"
             ),
-            "turn_history": self._game_result["turn_history"]
+            "turn_history": self._game_result["turn_history"],
+            "final_variables": self.contract.variables.copy()
         }
         
         # Update both agents' profiles

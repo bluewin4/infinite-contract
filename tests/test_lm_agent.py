@@ -6,6 +6,7 @@ import os
 import json
 from datetime import datetime
 from unittest.mock import patch
+import hashlib
 
 # Mock response for LiteLLM completion
 MOCK_RESPONSE = type('MockResponse', (), {
@@ -99,8 +100,11 @@ def test_lm_agent_profile_creation(mock_completion, setup_test_environment, test
         profiles = json.load(f)
     
     # Check for both agents
-    agent1_id = f"{agent1.name}_lmagent"
-    agent2_id = f"{agent2.name}_lmagent"
+    agent1_hash = hashlib.md5(str(agent1.personality).encode()).hexdigest()[:8]
+    agent2_hash = hashlib.md5(str(agent2.personality).encode()).hexdigest()[:8]
+    
+    agent1_id = f"{agent1.name}_{agent1_hash}_{agent1.model}_{agent1.temperature}"
+    agent2_id = f"{agent2.name}_{agent2_hash}_{agent2.model}_{agent2.temperature}"
     
     assert agent1_id in profiles
     assert agent2_id in profiles
@@ -143,7 +147,8 @@ def test_profile_updates_after_game(mock_completion, setup_test_environment, tes
     with open(profiles_path) as f:
         profiles = json.load(f)
     
-    agent1_id = f"{agent1.name}_lmagent"
+    agent1_hash = hashlib.md5(str(agent1.personality).encode()).hexdigest()[:8]
+    agent1_id = f"{agent1.name}_{agent1_hash}_{agent1.model}_{agent1.temperature}"
     profile = profiles[agent1_id]
     
     assert profile["stats"]["total_games"] == 2
@@ -181,6 +186,14 @@ def test_card_type_tracking(mock_completion, setup_test_environment, test_lm_age
     agent1 = test_lm_agent("Test Player 1", "x >= 3")
     agent2 = test_lm_agent("Test Player 2", "y >= 3")
     
+    # Create mock turn history with card types
+    mock_completion.return_value.choices[0].message.content = """
+SCRATCH PAD:
+Testing aggressive move
+
+SELECTED CARD: 1
+"""
+    
     game = InfiniteContractGame(agent1, agent2, config)
     
     # Play until game ends
@@ -192,7 +205,8 @@ def test_card_type_tracking(mock_completion, setup_test_environment, test_lm_age
     with open(profiles_path) as f:
         profiles = json.load(f)
     
-    agent1_id = f"{agent1.name}_lmagent"
+    agent1_hash = hashlib.md5(str(agent1.personality).encode()).hexdigest()[:8]
+    agent1_id = f"{agent1.name}_{agent1_hash}_{agent1.model}_{agent1.temperature}"
     profile = profiles[agent1_id]
     
     # Check that card type stats exist and have non-zero values
