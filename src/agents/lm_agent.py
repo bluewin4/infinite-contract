@@ -3,6 +3,9 @@ from .base_agent import BaseAgent
 from litellm import completion
 from dotenv import load_dotenv
 import os
+import json
+from datetime import datetime
+from pathlib import Path
 
 class LMAgent(BaseAgent):
     def __init__(self, 
@@ -12,21 +15,66 @@ class LMAgent(BaseAgent):
                  system_prompt: Optional[str] = None,
                  temperature: float = 0.7,
                  max_tokens: int = 500,
+                 testing: bool = False,
                  **model_kwargs):
         # Load environment variables at initialization
         load_dotenv()
         
-        # Check if required API keys are available based on model
-        self._check_api_keys(model)
+        # Skip API key validation if in testing mode
+        if not testing:
+            self._check_api_keys(model)
             
-        super().__init__(name)
+        super().__init__(name, victory_condition)
         self.model = model
-        self.victory_condition = victory_condition
         self.system_prompt = system_prompt or self._create_system_prompt()
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.model_kwargs = model_kwargs
         
+        # Initialize profile if not in testing mode
+        if not testing:
+            self._initialize_profile()
+
+    def _initialize_profile(self):
+        """Initialize or load the agent's profile"""
+        storage_path = Path(os.getenv("STORAGE_PATH", "storage"))
+        profiles_path = storage_path / "profiles.json"
+        
+        # Create storage directory if it doesn't exist
+        storage_path.mkdir(exist_ok=True)
+        
+        # Load or create profiles file
+        if not profiles_path.exists():
+            profiles = {}
+        else:
+            with open(profiles_path) as f:
+                profiles = json.load(f)
+        
+        # Create agent profile if it doesn't exist
+        agent_id = f"{self.name}_lmagent"
+        if agent_id not in profiles:
+            profiles[agent_id] = {
+                "name": self.name,
+                "model_type": "lmagent",
+                "model_params": {
+                    "model": self.model,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens
+                },
+                "stats": {
+                    "total_games": 0,
+                    "games_won": 0,
+                    "avg_turns_to_win": 0,
+                    "favorite_card_types": {},
+                    "victory_conditions": {}
+                },
+                "game_history": []
+            }
+            
+            # Save updated profiles
+            with open(profiles_path, 'w') as f:
+                json.dump(profiles, f, indent=4)
+
     def _check_api_keys(self, model: str):
         """Check for required API keys based on model provider"""
         if model.startswith(('claude', 'haiku')):
@@ -35,8 +83,7 @@ class LMAgent(BaseAgent):
         elif model.startswith('gpt'):
             if not os.getenv("OPENAI_API_KEY"):
                 raise ValueError("OPENAI_API_KEY not found in environment variables")
-        # Add other provider checks as needed
-        
+
     def get_response(self, prompt: str) -> str:
         """Get move decision from language model"""
         messages = [
@@ -45,9 +92,8 @@ class LMAgent(BaseAgent):
         ]
         
         try:
-            # Remove any model-specific kwargs that might not be supported
             kwargs = {k: v for k, v in self.model_kwargs.items() 
-                      if k in ['temperature', 'max_tokens']}
+                     if k in ['temperature', 'max_tokens']}
             
             response = completion(
                 model=self.model,
@@ -60,9 +106,8 @@ class LMAgent(BaseAgent):
             return response.choices[0].message.content
             
         except Exception as e:
-            # Log the error and raise with more context
             raise RuntimeError(f"Error getting LLM response: {str(e)}")
-        
+
     def _create_system_prompt(self) -> str:
         return f"""You are playing the Infinite Contract Game as {self.name}. 
 Your goal is: {self.victory_condition}
@@ -81,4 +126,32 @@ Key Points:
 - Your code adds to the existing contract
 - Think about the final values after full execution
 
-Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number.""" 
+Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number."""
+
+    def update_profile(self, game_result: Dict[str, Any]):
+        """Update the agent's profile with game results"""
+        storage_path = Path(os.getenv("STORAGE_PATH", "storage"))
+        profiles_path = storage_path / "profiles.json"
+        
+        with open(profiles_path) as f:
+            profiles = json.load(f)
+        
+        agent_id = f"{self.name}_lmagent"
+        profile = profiles[agent_id]
+        
+        # Update stats
+        profile["stats"]["total_games"] += 1
+        if game_result.get("winner") == self.name:
+            profile["stats"]["games_won"] += 1
+        
+        # Add game to history
+        profile["game_history"].append({
+            "winner": game_result.get("winner", "Draw"),
+            "total_turns": game_result.get("total_turns", 0),
+            "victory_condition": game_result.get("victory_condition", "Game ended in draw"),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Save updated profiles
+        with open(profiles_path, 'w') as f:
+            json.dump(profiles, f, indent=4)

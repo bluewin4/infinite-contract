@@ -23,6 +23,8 @@ class InfiniteContractGame:
         self.config = config
         self.current_player = 'agent1'
         self.current_code = []  # Track the current turn's code
+        self.game_over = False
+        self.winner = None
         
     def create_turn_prompt(self) -> str:
         """Create the prompt for current turn"""
@@ -66,7 +68,10 @@ SELECTED CARD: [number]
 """
 
     def play_turn(self) -> bool:
-        """Execute a single turn"""
+        """Play a single turn of the game. Returns False if game is over."""
+        if self.game_over:
+            return False
+            
         agent = self.agents[self.current_player]
         
         # Create and send prompt
@@ -94,12 +99,20 @@ SELECTED CARD: [number]
             variables=dict(self.contract.variables)
         )
         
-        # Check victory conditions
-        for player_name, agent in self.agents.items():
+        # Check victory conditions after turn
+        for player_id, agent in self.agents.items():
             if self.contract.check_victory_condition(agent.victory_condition):
-                print(f"\n{player_name} has won!")
+                self.game_over = True
+                self.winner = agent.name
+                self._update_agent_profiles()  # New method call
                 return False
-        
+                
+        # Check if max turns reached
+        if len(self.history.turns) >= self.config.max_turns:
+            self.game_over = True
+            self._update_agent_profiles()  # New method call
+            return False
+            
         # Switch players
         self._switch_players()
         return True
@@ -169,3 +182,20 @@ SELECTED CARD: [number]
             return scratch_pad, card_number
         except Exception as e:
             raise ValueError(f"Invalid response format: {e}")
+
+    def _update_agent_profiles(self):
+        """Update profiles for both agents when game ends"""
+        game_result = {
+            "winner": self.winner or "Draw",
+            "total_turns": len(self.history.turns),
+            "victory_condition": (
+                f"{self.winner} achieved victory condition" 
+                if self.winner 
+                else "Game ended in draw"
+            )
+        }
+        
+        # Update both agents' profiles
+        for agent in self.agents.values():
+            if hasattr(agent, 'update_profile'):  # Check if agent supports profiles
+                agent.update_profile(game_result)

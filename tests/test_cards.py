@@ -5,7 +5,7 @@ from src.core.contract import CodeContract
 from src.agents.base_agent import BaseAgent
 
 class TestAgent(BaseAgent):
-    def __init__(self, name: str, victory_condition: str, target_var: str, card_to_play: int):
+    def setup(self, name: str, victory_condition: str, target_var: str, card_to_play: int):
         super().__init__(name, victory_condition, target_var)
         self.card_to_play = card_to_play
         
