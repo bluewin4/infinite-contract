@@ -31,9 +31,8 @@ class LMAgent(BaseAgent):
         self.max_tokens = max_tokens
         self.model_kwargs = model_kwargs
         
-        # Initialize profile if not in testing mode
-        if not testing:
-            self._initialize_profile()
+        # Always initialize profile, even in testing mode
+        self._initialize_profile()
 
     def _initialize_profile(self):
         """Initialize or load the agent's profile"""
@@ -41,14 +40,14 @@ class LMAgent(BaseAgent):
         profiles_path = storage_path / "profiles.json"
         
         # Create storage directory if it doesn't exist
-        storage_path.mkdir(exist_ok=True)
+        storage_path.mkdir(parents=True, exist_ok=True)
         
         # Load or create profiles file
-        if not profiles_path.exists():
-            profiles = {}
-        else:
+        if profiles_path.exists():
             with open(profiles_path) as f:
                 profiles = json.load(f)
+        else:
+            profiles = {}
         
         # Create agent profile if it doesn't exist
         agent_id = f"{self.name}_lmagent"
@@ -64,9 +63,17 @@ class LMAgent(BaseAgent):
                 "stats": {
                     "total_games": 0,
                     "games_won": 0,
+                    "win_rate": 0.0,
                     "avg_turns_to_win": 0,
                     "favorite_card_types": {},
-                    "victory_conditions": {}
+                    "victory_conditions": [],
+                    "card_type_stats": {
+                        "aggressive": 0,
+                        "defensive": 0,
+                        "strategic": 0,
+                        "utility": 0,
+                        "cards_per_game": []
+                    }
                 },
                 "game_history": []
             }
@@ -129,7 +136,6 @@ Key Points:
 Remember: Always format your response exactly as shown in the prompt, with a SCRATCH PAD section for your thinking and a SELECTED CARD number."""
 
     def update_profile(self, game_result: Dict[str, Any]):
-        """Update the agent's profile with game results"""
         storage_path = Path(os.getenv("STORAGE_PATH", "storage"))
         profiles_path = storage_path / "profiles.json"
         
@@ -139,18 +145,54 @@ Remember: Always format your response exactly as shown in the prompt, with a SCR
         agent_id = f"{self.name}_lmagent"
         profile = profiles[agent_id]
         
-        # Update stats
+        # Update basic stats
         profile["stats"]["total_games"] += 1
-        if game_result.get("winner") == self.name:
-            profile["stats"]["games_won"] += 1
+        wins = profile["stats"]["games_won"]
+        
+        if game_result["winner"] == self.name:
+            wins += 1
+            profile["stats"]["games_won"] = wins
+            # Update average turns to win
+            current_avg = profile["stats"]["avg_turns_to_win"]
+            profile["stats"]["avg_turns_to_win"] = round(
+                (current_avg * (wins - 1) + game_result["total_turns"]) / wins
+            )
+        
+        # Calculate win rate
+        profile["stats"]["win_rate"] = round(wins / profile["stats"]["total_games"], 3)
         
         # Add game to history
-        profile["game_history"].append({
-            "winner": game_result.get("winner", "Draw"),
-            "total_turns": game_result.get("total_turns", 0),
-            "victory_condition": game_result.get("victory_condition", "Game ended in draw"),
-            "timestamp": datetime.now().isoformat()
-        })
+        game_summary = {
+            "timestamp": datetime.now().isoformat(),
+            "total_turns": game_result["total_turns"],
+            "winner": game_result["winner"],
+            "victory_condition": game_result["victory_condition"]
+        }
+        if "game_history" not in profile:
+            profile["game_history"] = []
+        profile["game_history"].append(game_summary)
+        
+        # Process card usage from turn history
+        game_cards = {
+            "aggressive": 0,
+            "defensive": 0,
+            "strategic": 0,
+            "utility": 0
+        }
+        
+        for turn in game_result["turn_history"]:
+            if turn["player"] == self.name and turn["card_type"] is not None:
+                card_type = turn["card_type"].lower()
+                if card_type in game_cards:
+                    game_cards[card_type] += 1
+                
+        # Update card type stats
+        stats = profile["stats"]["card_type_stats"]
+        for category in game_cards:
+            stats[category] += game_cards[category]
+        
+        # Add per-game card usage
+        stats["cards_per_game"].append(game_cards)
         
         # Save updated profiles
         with open(profiles_path, 'w') as f:

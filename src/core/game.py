@@ -25,6 +25,17 @@ class InfiniteContractGame:
         self.current_code = []  # Track the current turn's code
         self.game_over = False
         self.winner = None
+        self._game_result = {
+            "turn_history": [],
+            "total_turns": 0,
+            "winner": None,
+            "victory_condition": None
+        }
+        # Add turn tracking for card usage
+        self._current_turn_data = {
+            'agent1': [],
+            'agent2': []
+        }
         
     def create_turn_prompt(self) -> str:
         """Create the prompt for current turn"""
@@ -68,54 +79,102 @@ SELECTED CARD: [number]
 """
 
     def play_turn(self) -> bool:
-        """Play a single turn of the game. Returns False if game is over."""
         if self.game_over:
             return False
-            
+        
         agent = self.agents[self.current_player]
+        turn_data = None
         
-        # Create and send prompt
-        prompt = self.create_turn_prompt()
-        response = agent.get_response(prompt)
-        
-        # Extract selected card and thought process
-        selected_card = self._extract_selected_card(response)
-        
-        # Apply the selected card and update contract state
-        if selected_card is not None:
-            selected_card_obj = self.available_cards[selected_card - 1]
-            # Apply the new card to existing contract
-            self.contract.apply_card(selected_card_obj)
-            # Execute the full contract
-            self.contract._execute_contract()
+        try:
+            # Get available cards before creating prompt
+            self.available_cards = self._get_available_cards()
             
-        # Record the turn in history
-        self.history.add_turn(
-            turn_number=len(self.history.turns) + 1,
-            player_name=self.current_player,
-            thought_process=response,
-            selected_card=selected_card,
-            contract_state=self.contract.current_code.copy(),
-            variables=dict(self.contract.variables)
-        )
+            # Create and send prompt
+            prompt = self.create_turn_prompt()
+            response = agent.get_response(prompt)
+            
+            # Extract selected card and thought process
+            scratch_pad, card_index = self._parse_response(response)
+            
+            # Get the selected card object
+            selected_card = self.available_cards[card_index - 1]
+            
+            # Apply the card's effect
+            self.contract.add_line(selected_card.code)
+            
+            # Only record turn data after all operations succeed
+            turn_data = {
+                "player": agent.name,
+                "turn_number": len(self.history.turns) + 1,
+                "card_type": selected_card.card_type.value.split('_')[0].lower(),
+                "card_id": selected_card.id,
+                "success": True
+            }
+            
+            # After recording a successful turn
+            if turn_data["success"]:
+                self.history.add_turn(
+                    turn_number=turn_data["turn_number"],
+                    player_name=turn_data["player"],
+                    thought_process=scratch_pad,
+                    selected_card=selected_card,
+                    contract_state=self.contract.current_code,
+                    variables=self.contract.variables.copy()
+                )
+            
+        except ValueError as e:
+            # Handle parsing errors specifically
+            turn_data = {
+                "player": agent.name,
+                "turn_number": len(self.history.turns) + 1,
+                "error": str(e),
+                "success": False,
+                "card_type": None,
+                "card_id": None
+            }
+            
+        except Exception as e:
+            # Handle other errors
+            turn_data = {
+                "player": agent.name,
+                "turn_number": len(self.history.turns) + 1,
+                "error": str(e),
+                "success": False,
+                "card_type": None,
+                "card_id": None
+            }
         
-        # Check victory conditions after turn
-        for player_id, agent in self.agents.items():
-            if self.contract.check_victory_condition(agent.victory_condition):
-                self.game_over = True
-                self.winner = agent.name
-                self._update_agent_profiles()  # New method call
-                return False
-                
-        # Check if max turns reached
+        # Always record the turn data
+        if turn_data:
+            self._game_result["turn_history"].append(turn_data)
+            
+            # Add to game history if it was a failed turn
+            if not turn_data["success"]:
+                self.history.add_turn(
+                    turn_number=turn_data["turn_number"],
+                    player_name=turn_data["player"],
+                    thought_process=f"Invalid move - {turn_data['error']}",
+                    selected_card=None,
+                    contract_state=self.contract.current_code,
+                    variables=self.contract.variables.copy()
+                )
+        
         if len(self.history.turns) >= self.config.max_turns:
             self.game_over = True
-            self._update_agent_profiles()  # New method call
+            self._game_result["victory_condition"] = "Game ended due to max turns reached"
             return False
-            
-        # Switch players
-        self._switch_players()
-        return True
+        
+        self.check_victory_conditions()
+        
+        # Update profiles if game is over
+        if self.game_over:
+            self._update_agent_profiles()
+        
+        # Switch players if game isn't over
+        if not self.game_over:
+            self.current_player = 'agent2' if self.current_player == 'agent1' else 'agent1'
+        
+        return not self.game_over
 
     def _extract_selected_card(self, response: str) -> Optional[int]:
         """Extract the selected card number from the response"""
@@ -176,12 +235,30 @@ SELECTED CARD: [number]
     def _parse_response(self, response: str) -> tuple[str, int]:
         """Parse agent response into scratch pad and card number"""
         try:
+            # Split on SELECTED CARD: and get the last instance
             parts = response.split("SELECTED CARD:")
+            if len(parts) < 2:
+                raise ValueError("No 'SELECTED CARD:' section found in response")
+            
             scratch_pad = parts[0].replace("SCRATCH PAD:", "").strip()
-            card_number = int(parts[1].strip())
+            card_text = parts[-1].strip()
+            
+            # Look for first number in the response
+            numbers = [int(word) for word in card_text.split() if word.isdigit()]
+            if not numbers:
+                raise ValueError("No valid card number found in selection")
+            
+            card_number = numbers[0]
+            
+            # Validate card number range immediately
+            if not (1 <= card_number <= len(self.available_cards)):
+                raise ValueError(f"Card number {card_number} out of valid range")
+            
             return scratch_pad, card_number
+            
         except Exception as e:
-            raise ValueError(f"Invalid response format: {e}")
+            # Convert all exceptions to ValueError with clear message
+            raise ValueError(f"Invalid response format: {str(e)}")
 
     def _update_agent_profiles(self):
         """Update profiles for both agents when game ends"""
@@ -192,10 +269,26 @@ SELECTED CARD: [number]
                 f"{self.winner} achieved victory condition" 
                 if self.winner 
                 else "Game ended in draw"
-            )
+            ),
+            "turn_history": self._game_result["turn_history"]
         }
         
         # Update both agents' profiles
         for agent in self.agents.values():
-            if hasattr(agent, 'update_profile'):  # Check if agent supports profiles
+            if hasattr(agent, 'update_profile'):
                 agent.update_profile(game_result)
+
+    def check_victory_conditions(self) -> None:
+        """Check if either player has achieved their victory condition"""
+        for player_id, agent in self.agents.items():
+            if self.contract.check_victory_condition(agent.victory_condition):
+                self.game_over = True
+                self.winner = agent.name
+                self._game_result["winner"] = self.winner
+                self._game_result["victory_condition"] = f"{self.winner} achieved victory condition"
+                break
+        
+        # Add this to handle max turns reached
+        if not self.winner and len(self.history.turns) >= self.config.max_turns:
+            self.game_over = True
+            self._game_result["victory_condition"] = "Game ended due to max turns reached"

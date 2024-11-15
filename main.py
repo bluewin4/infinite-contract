@@ -115,5 +115,13 @@ def run_game_with_logging(game: InfiniteContractGame, max_turns: int):
         print(f"Variables: {current_turn.variables}")
         print("-" * 50)
 
+    # Add final game summary
+    print("\n=== Game Summary ===")
+    print(f"Total Turns: {game._game_result['total_turns']}")
+    print(f"Final Variables: {game.contract.variables}")
+    print(f"Winner: {game._game_result['winner'] or 'Draw'}")
+    print(f"Victory Condition: {game._game_result['victory_condition']}")
+    print("=" * 50)
+
 if __name__ == "__main__":
     main() 

@@ -4,20 +4,25 @@ from src.core.game import InfiniteContractGame, GameConfig
 from src.core.contract import CodeContract
 from src.agents.base_agent import BaseAgent
 
-class TestAgent(BaseAgent):
-    def setup(self, name: str, victory_condition: str, target_var: str, card_to_play: int):
-        super().__init__(name, victory_condition, target_var)
-        self.card_to_play = card_to_play
-        
-    def get_response(self, prompt: str) -> str:
-        return f"""
+@pytest.fixture
+def test_agent():
+    def _create_agent(name: str, victory_condition: str, target_var: str, card_to_play: int):
+        class TestAgent(BaseAgent):
+            def __init__(self, name: str, victory_condition: str, target_var: str):
+                super().__init__(name, victory_condition, target_var)
+                self.card_to_play = card_to_play
+                
+            def get_response(self, prompt: str) -> str:
+                return f"""
 SCRATCH PAD:
 Testing card {self.card_to_play}
 
 SELECTED CARD: {self.card_to_play}
 """
+        return TestAgent(name, victory_condition, target_var)
+    return _create_agent
 
-def create_test_game(victory_condition: str = "x >= 5",
+def create_test_game(test_agent, victory_condition: str = "x >= 5",
                     agent1_card: int = 1,
                     agent2_card: int = 1) -> InfiniteContractGame:
     config = GameConfig(
@@ -33,8 +38,19 @@ def create_test_game(victory_condition: str = "x >= 5",
         cards_per_turn=3
     )
 
-    agent1 = TestAgent("Player 1", victory_condition, "x", agent1_card)
-    agent2 = TestAgent("Player 2", victory_condition, "y", agent2_card)
+    agent1 = test_agent(
+        name="Player 1",
+        victory_condition=victory_condition,
+        target_var="x",
+        card_to_play=agent1_card
+    )
+    
+    agent2 = test_agent(
+        name="Player 2",
+        victory_condition=victory_condition,
+        target_var="y",
+        card_to_play=agent2_card
+    )
     
     return InfiniteContractGame(agent1, agent2, config)
 
@@ -55,13 +71,13 @@ def create_test_game(victory_condition: str = "x >= 5",
     # Utility operations
     ("util_reset_z", "x >= 10", {"x": 1, "y": 1, "z": 0}),  # Only z gets reset to 0
 ])
-def test_individual_card_execution(card_id, victory_condition, expected_vars):
+def test_individual_card_execution(test_agent, card_id, victory_condition, expected_vars):
     library = CardLibrary()
     card = library.get_card(card_id)
     assert card is not None, f"Card {card_id} not found"
 
     # Create a game instance with initial state and victory condition
-    game = create_test_game(victory_condition=victory_condition)
+    game = create_test_game(test_agent, victory_condition=victory_condition)
     
     # Apply the card
     game.contract.apply_card(card)
@@ -70,8 +86,8 @@ def test_individual_card_execution(card_id, victory_condition, expected_vars):
     assert game.contract.variables == expected_vars, \
         f"Expected {expected_vars}, got {game.contract.variables}"
 
-def test_contract_manipulation_cards():
-    game = create_test_game()
+def test_contract_manipulation_cards(test_agent):
+    game = create_test_game(test_agent)
     library = CardLibrary()
     
     # Test clear contract
@@ -88,8 +104,8 @@ def test_contract_manipulation_cards():
     game.contract.apply_card(pop_card)
     assert len(game.contract.current_code) == 1
 
-def test_card_availability():
-    game = create_test_game(victory_condition="x >= 10")
+def test_card_availability(test_agent):
+    game = create_test_game(test_agent, victory_condition="x >= 10")
     
     # Get available cards for current player
     available_cards = game._get_available_cards()
@@ -112,9 +128,9 @@ def test_card_categorization_by_goal():
     increment_y = library.get_card("op_increment_y")
     assert increment_y.card_type == CardType.AGGRESSIVE_Y
 
-def test_victory_condition():
+def test_victory_condition(test_agent):
     # Test game with x >= 5 victory condition
-    game = create_test_game(victory_condition="x >= 5")
+    game = create_test_game(test_agent, victory_condition="x >= 5")
     
     # Apply cards to reach victory condition
     library = CardLibrary()
@@ -135,9 +151,9 @@ def test_victory_condition():
     (["op_double_x", "op_increment_x"], {"x": 3, "y": 1, "z": 1}),     # 1->2->3
     (["op_increment_y", "op_double_y"], {"x": 1, "y": 4, "z": 1}),     # 1->2->4
 ])
-def test_multiple_card_execution(cards, expected_vars):
+def test_multiple_card_execution(test_agent, cards, expected_vars):
     library = CardLibrary()
-    game = create_test_game()
+    game = create_test_game(test_agent)
     
     # Apply sequence of cards
     for card_id in cards:
@@ -215,7 +231,7 @@ def test_invert_with_complex_operations():
     # 3. x = x + 1  (x: 2 -> 3)
     assert contract.variables == {'x': 3, 'y': 2, 'z': 1}
 
-def test_card_frequency():
+def test_card_frequency(test_agent):
     library = CardLibrary()
     
     # Set different frequencies
@@ -232,7 +248,7 @@ def test_card_frequency():
             get_allowed_cards=lambda _: [CardType.AGGRESSIVE_X, CardType.UTILITY],
             cards_per_turn=1
         )
-        game = create_test_game()
+        game = create_test_game(test_agent)
         cards = game._get_available_cards()
         samples.extend(cards)
     
