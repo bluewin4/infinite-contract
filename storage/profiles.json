@@ -219,8 +219,8 @@
             "max_tokens": 500
         },
         "stats": {
-            "total_games": 3,
-            "games_won": 3,
+            "total_games": 4,
+            "games_won": 4,
             "win_rate": 1.0,
             "avg_turns_to_win": 0,
             "favorite_card_types": {},
@@ -236,7 +236,7 @@
             "card_type_stats": {
                 "aggressive": 0,
                 "defensive": 0,
-                "strategic": 1,
+                "strategic": 2,
                 "utility": 0,
                 "cards_per_game": [
                     {
@@ -255,6 +255,12 @@
                         "aggressive": 0,
                         "defensive": 0,
                         "strategic": 0,
+                        "utility": 0
+                    },
+                    {
+                        "aggressive": 0,
+                        "defensive": 0,
+                        "strategic": 1,
                         "utility": 0
                     }
                 ]
@@ -296,6 +302,18 @@
                     "strategic": 0,
                     "utility": 0
                 }
+            },
+            {
+                "timestamp": "2024-11-16T22:10:49.561652",
+                "total_turns": 6,
+                "winner": "Player 1",
+                "victory_condition": "Player 1 achieved victory condition",
+                "card_usage": {
+                    "aggressive": 0,
+                    "defensive": 0,
+                    "strategic": 1,
+                    "utility": 0
+                }
             }
         ]
     },
@@ -309,7 +327,7 @@
             "max_tokens": 500
         },
         "stats": {
-            "total_games": 3,
+            "total_games": 4,
             "games_won": 0,
             "win_rate": 0.0,
             "avg_turns_to_win": 0,
@@ -325,7 +343,7 @@
                 "aggressive": 0,
                 "defensive": 0,
                 "strategic": 0,
-                "utility": 1,
+                "utility": 2,
                 "cards_per_game": [
                     {
                         "aggressive": 0,
@@ -344,6 +362,12 @@
                         "defensive": 0,
                         "strategic": 0,
                         "utility": 0
+                    },
+                    {
+                        "aggressive": 0,
+                        "defensive": 0,
+                        "strategic": 0,
+                        "utility": 1
                     }
                 ]
             }
@@ -383,6 +407,18 @@
                     "defensive": 0,
                     "strategic": 0,
                     "utility": 0
+                }
+            },
+            {
+                "timestamp": "2024-11-16T22:10:49.573662",
+                "total_turns": 6,
+                "winner": "Player 1",
+                "victory_condition": "Player 1 achieved victory condition",
+                "card_usage": {
+                    "aggressive": 0,
+                    "defensive": 0,
+                    "strategic": 0,
+                    "utility": 1
                 }
             }
         ]

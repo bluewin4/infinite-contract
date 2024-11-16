@@ -93,8 +93,8 @@ class PersonalityAnalyzer:
             return None
             
         # Calculate metrics
-        aggression = move_counts["aggressive"] / max(1, move_counts["defensive"])
-        risk_taking = move_counts["strategic"] / max(1, total_moves)
+        aggression = move_counts["aggressive"]
+        risk_taking = move_counts["strategic"]
         
         # Calculate move diversity per game
         move_distributions = []
@@ -112,10 +112,7 @@ class PersonalityAnalyzer:
         consistency = 1.0 - (np.std(game_lengths) / (np.mean(game_lengths) + 1))
         
         # Calculate favorite moves
-        favorite_moves = {
-            move_type: count / max(1, total_moves)
-            for move_type, count in move_counts.items()
-        }
+        favorite_moves = move_counts.copy()
         
         return PersonalityMetrics(
             aggression_score=aggression,

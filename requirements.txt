@@ -2,3 +2,7 @@ python-dotenv>=0.19.0
 litellm
 openai
 pytest
+seaborn
+matplotlib
+pandas
+pathlib
