@@ -219,8 +219,8 @@
             "max_tokens": 500
         },
         "stats": {
-            "total_games": 2,
-            "games_won": 2,
+            "total_games": 3,
+            "games_won": 3,
             "win_rate": 1.0,
             "avg_turns_to_win": 0,
             "favorite_card_types": {},
@@ -250,6 +250,12 @@
                         "defensive": 0,
                         "strategic": 1,
                         "utility": 0
+                    },
+                    {
+                        "aggressive": 0,
+                        "defensive": 0,
+                        "strategic": 0,
+                        "utility": 0
                     }
                 ]
             }
@@ -278,6 +284,18 @@
                     "strategic": 1,
                     "utility": 0
                 }
+            },
+            {
+                "timestamp": "2024-11-16T22:05:12.271042",
+                "total_turns": 7,
+                "winner": "Player 1",
+                "victory_condition": "Player 1 achieved victory condition",
+                "card_usage": {
+                    "aggressive": 0,
+                    "defensive": 0,
+                    "strategic": 0,
+                    "utility": 0
+                }
             }
         ]
     },
@@ -291,7 +309,7 @@
             "max_tokens": 500
         },
         "stats": {
-            "total_games": 2,
+            "total_games": 3,
             "games_won": 0,
             "win_rate": 0.0,
             "avg_turns_to_win": 0,
@@ -320,6 +338,12 @@
                         "defensive": 0,
                         "strategic": 0,
                         "utility": 1
+                    },
+                    {
+                        "aggressive": 0,
+                        "defensive": 0,
+                        "strategic": 0,
+                        "utility": 0
                     }
                 ]
             }
@@ -347,6 +371,18 @@
                     "defensive": 0,
                     "strategic": 0,
                     "utility": 1
+                }
+            },
+            {
+                "timestamp": "2024-11-16T22:05:12.273983",
+                "total_turns": 7,
+                "winner": "Player 1",
+                "victory_condition": "Player 1 achieved victory condition",
+                "card_usage": {
+                    "aggressive": 0,
+                    "defensive": 0,
+                    "strategic": 0,
+                    "utility": 0
                 }
             }
         ]

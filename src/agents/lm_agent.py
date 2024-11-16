@@ -38,63 +38,47 @@ class LMAgent(BaseAgent):
         self._initialize_profile()
 
     def _initialize_profile(self):
-        """Initialize or load the agent's profile"""
         storage_path = Path(os.getenv("STORAGE_PATH", "storage"))
         profiles_path = storage_path / "profiles.json"
         
-        # Create storage directory if it doesn't exist
-        storage_path.mkdir(parents=True, exist_ok=True)
+        # Load existing profiles
+        with open(profiles_path) as f:
+            profiles = json.load(f)
         
-        # Load or create profiles file
-        if profiles_path.exists():
-            with open(profiles_path) as f:
-                profiles = json.load(f)
-        else:
-            profiles = {}
-        
-        # Create unique agent ID including personality hash
+        # Generate agent ID
         agent_id = self._generate_agent_id()
         
-        # Create agent profile if it doesn't exist
+        # Create new profile if it doesn't exist
         if agent_id not in profiles:
             profiles[agent_id] = {
                 "name": self.name,
-                "personality": self.personality,
-                "model_type": "lmagent",
+                "model_type": self.model,
                 "model_params": {
-                    "model": self.model,
-                    "temperature": self.temperature,
-                    "max_tokens": self.max_tokens
+                    "temperature": self.temperature
                 },
+                "personality": self.personality,
                 "stats": {
                     "total_games": 0,
                     "games_won": 0,
                     "win_rate": 0.0,
                     "avg_turns_to_win": 0,
-                    "favorite_card_types": {},
-                    "victory_conditions": [],
-                    "personality_traits": {
-                        "aggression": 0.0,
-                        "defensiveness": 0.0,
-                        "strategy_depth": 0.0,
-                        "adaptability": 0.0
-                    },
                     "card_type_stats": {
                         "aggressive": 0,
                         "defensive": 0,
                         "strategic": 0,
                         "utility": 0,
                         "cards_per_game": []
-                    }
+                    },
+                    "favorite_card_types": {},
+                    "personality_traits": {},
+                    "victory_conditions": []
                 },
                 "game_history": []
             }
-        
-        # Always save the profile
-        with open(profiles_path, 'w') as f:
-            json.dump(profiles, f, indent=4)
-        
-        return profiles[agent_id]
+            
+            # Save updated profiles
+            with open(profiles_path, 'w') as f:
+                json.dump(profiles, f, indent=4)
 
     def _check_api_keys(self, model: str):
         """Check for required API keys based on model provider"""
