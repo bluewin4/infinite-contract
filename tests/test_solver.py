@@ -36,3 +36,26 @@ def test_solver_finds_immediate_win():
             library.get_card("transfer_x_to_z")]
     ranked = solver.best_in_hand(state, 3, 0, hand)
     assert ranked[0][1].id == "op_double_x" and ranked[0][0] == 1
+
+
+def test_score_moves_gives_zero_regret_to_solver_play(tmp_path):
+    import json
+    from score_moves import score_game
+
+    depth, library = 2, CardLibrary()
+    solver = Solver(max_turns=depth)
+    rng, state, transcript = random.Random(0), EMPTY, []
+    for turn in range(1, 9):
+        mover = (turn - 1) % 2
+        hand = rng.sample(solver.decks[mover], solver.hand_size)
+        _, best = solver.best_in_hand(state, depth, mover, hand)[0]
+        transcript.append({"turn": turn, "player": f"Player {mover + 1}",
+                           "card": best.name, "hand": [c.id for c in hand]})
+        state = apply(state, best.code)
+        if solver.outcome(state) is not None:
+            break
+    (tmp_path / "result.json").write_text(json.dumps(
+        {"winner": "?", "turns": len(transcript), "transcript": transcript}))
+
+    _, moves = score_game(solver, library, str(tmp_path), depth)
+    assert all(m["best"] and abs(m["regret"]) < 1e-9 for m in moves)
