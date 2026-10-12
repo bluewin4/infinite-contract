@@ -1,0 +1,473 @@
+<title>Contract Value Space</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument panel. The 3D value space is the instrument; a narrow
+   side rail holds the readouts and controls; stacks to one column on phones. */
+:root {
+  --bg: #eef0f4;
+  --panel: #fbfbfd;
+  --fg: #1a2130;
+  --muted: #5a6476;
+  --line: #8d96a8;
+  --rule: #d7dbe3;
+  --x: #c4502f;      /* Player 1: wins at x >= target */
+  --y: #2a68b0;      /* Player 2: wins at y >= target */
+  --route: #13866a;  /* a real game's path */
+  --node: #9aa2b2;
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f131a; --panel: #161b24; --fg: #e5e8ee; --muted: #98a1b1; --line: #6c758a;
+    --rule: #262d3a; --x: #f07c5e; --y: #6ea8ee; --route: #3cc79f; --node: #5f687b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f131a; --panel: #161b24; --fg: #e5e8ee; --muted: #98a1b1; --line: #6c758a;
+  --rule: #262d3a; --x: #f07c5e; --y: #6ea8ee; --route: #3cc79f; --node: #5f687b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 20px 32px;
+}
+.wrap { max-width: 1240px; margin-inline: auto; display: grid; gap: 18px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 4vw, 44px);
+     line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 em { font-style: italic; }
+.lede { margin: 0; color: var(--muted); max-width: 68ch; }
+.lede code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.canvas-box { position: relative; background: var(--panel); border: 1px solid var(--rule);
+              border-radius: 6px; overflow: hidden; touch-action: none; min-width: 0; }
+canvas { display: block; width: 100%; height: min(72vh, 680px); min-height: 360px; cursor: grab; }
+canvas:active { cursor: grabbing; }
+.overlay { position: absolute; left: 12px; bottom: 10px; font-family: var(--font-mono);
+           font-size: 11px; color: var(--muted); pointer-events: none; }
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; gap: 6px; }
+aside { display: grid; gap: 14px; min-width: 0; }
+.group { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px;
+         padding: 12px 14px; display: grid; gap: 8px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+         font-weight: 600; }
+.seg { display: flex; gap: 0; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; }
+.seg button { flex: 1; border: 0; border-right: 1px solid var(--rule); border-radius: 0; }
+.seg button:last-child { border-right: 0; }
+button { font: inherit; font-size: 13px; color: var(--fg); background: var(--bg);
+         border: 1px solid var(--rule); border-radius: 5px; padding: 5px 10px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--fg); color: var(--panel); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--route); outline-offset: 2px; }
+.zoom button { width: 30px; height: 30px; padding: 0; background: var(--panel); }
+select, input[type="range"] { width: 100%; font: inherit; font-size: 13px; color: var(--fg); }
+select { background: var(--bg); border: 1px solid var(--rule); border-radius: 5px; padding: 5px 8px; }
+input[type="range"] { accent-color: var(--route); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { min-width: 0; }
+.legend { display: grid; gap: 5px; font-size: 13px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px;
+      vertical-align: -1px; }
+.readout { font-family: var(--font-mono); font-size: 12.5px; display: grid; gap: 3px;
+           font-variant-numeric: tabular-nums; }
+.readout .big { font-size: 18px; font-weight: 500; }
+.kv { display: flex; justify-content: space-between; gap: 10px; }
+.kv span:first-child { color: var(--muted); }
+.moves { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 12px; }
+.moves li { display: flex; justify-content: space-between; gap: 8px; }
+.moves li span:last-child { color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+.step { font-size: 13px; min-height: 2.6em; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Contract <em>value space</em></h1>
+    <p class="lede" id="lede">Every point is one (x, y, z) result of running the contract. Contracts that produce the same values are merged into one point, so its size shows how many contracts reach it. Player 1 wins at <code>x ≥ 4</code>, Player 2 at <code>y ≥ 4</code>.</p>
+  </header>
+
+  <div class="stage">
+    <div class="canvas-box">
+      <canvas id="cv" aria-label="3D graph of reachable (x, y, z) values" role="img"></canvas>
+      <div class="zoom">
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+      <div class="overlay" id="hud">drag to rotate · scroll to zoom · tap a point</div>
+    </div>
+
+    <aside>
+      <div class="group">
+        <div class="label">Arrange points by</div>
+        <div class="seg" role="group" aria-label="Layout">
+          <button id="lay-values" aria-pressed="true">Their values</button>
+          <button id="lay-force" aria-pressed="false">Connections</button>
+        </div>
+        <div class="label">Colour by</div>
+        <div class="seg" role="group" aria-label="Colouring">
+          <button id="col-threat" aria-pressed="true">Who's close</button>
+          <button id="col-depth" aria-pressed="false">Moves from start</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="group">
+        <div class="label">Replay a Haiku game</div>
+        <select id="game"></select>
+        <input type="range" id="stepper" min="0" max="0" value="0" aria-label="Turn">
+        <div class="row">
+          <button id="play">Play</button>
+          <button id="prev" aria-label="Previous turn">‹</button>
+          <button id="next" aria-label="Next turn">›</button>
+        </div>
+        <div class="step" id="stepinfo"></div>
+      </div>
+
+      <div class="group">
+        <div class="label">Selected point</div>
+        <div class="readout" id="detail"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script type="application/json" id="graph-data">/*DATA*/</script>
+<script>
+(() => {
+  const DATA = JSON.parse(document.getElementById('graph-data').textContent);
+  const T = DATA.target;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- data ----------
+  const nodes = DATA.nodes.map((n, i) => ({ ...n, i }));
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const und = new Map();
+  for (const e of DATA.edges) {
+    const a = byId.get(e.source), b = byId.get(e.target);
+    if (!a || !b) continue;
+    const k = a.i < b.i ? a.i + ':' + b.i : b.i + ':' + a.i;
+    const u = und.get(k) || { a: Math.min(a.i, b.i), b: Math.max(a.i, b.i), count: 0 };
+    u.count += e.count; und.set(k, u);
+  }
+  const edges = [...und.values()];
+  const outMoves = new Map();
+  for (const e of DATA.edges) {
+    if (!outMoves.has(e.source)) outMoves.set(e.source, []);
+    outMoves.get(e.source).push(e);
+  }
+  const maxDepth = Math.max(...nodes.map(n => n.depth ?? 0));
+  document.getElementById('lede').insertAdjacentText('beforeend',
+    ` Shown: ${DATA.positions_explored.toLocaleString()} contracts within ${DATA.depth} moves of the start, plus every position from the replayable games, merged into ${nodes.length} points.`);
+
+  // ---------- layouts ----------
+  const valuePos = nodes.map(n => [n.x, n.y, n.z * 0.9]);
+  let forcePos = null;
+  function computeForce() {
+    const p = valuePos.map(v => [v[0] * 0.6, v[1] * 0.6, v[2] * 0.6]);
+    const N = p.length, vel = p.map(() => [0, 0, 0]);
+    for (let it = 0; it < 420; it++) {
+      for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+        const d = [p[i][0] - p[j][0], p[i][1] - p[j][1], p[i][2] - p[j][2]];
+        const r2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + 0.01, f = 0.9 / r2;
+        for (let k = 0; k < 3; k++) { vel[i][k] += d[k] * f; vel[j][k] -= d[k] * f; }
+      }
+      for (const e of edges) {
+        const A = p[e.a], B = p[e.b], w = 0.03;
+        for (let k = 0; k < 3; k++) { const d = (B[k] - A[k]) * w; vel[e.a][k] += d; vel[e.b][k] -= d; }
+      }
+      for (let i = 0; i < N; i++) for (let k = 0; k < 3; k++) {
+        vel[i][k] -= p[i][k] * 0.004; vel[i][k] *= 0.82; p[i][k] += vel[i][k];
+      }
+    }
+    // centre and scale to the same span as the value layout
+    const c = [0, 1, 2].map(k => p.reduce((s, q) => s + q[k], 0) / N);
+    const r = Math.max(...p.map(q => Math.hypot(q[0] - c[0], q[1] - c[1], q[2] - c[2])));
+    return p.map(q => q.map((v, k) => (v - c[k]) / r * 7 + [2.5, 2.5, 2][k]));
+  }
+
+  // ---------- state ----------
+  let layout = 'values', colourBy = 'threat';
+  let pos = valuePos.map(v => v.slice()), from = null, to = null, animT = 1;
+  let yaw = -0.62, pitch = 0.32, zoom = 1;
+  let hover = null, selected = byId.get('1,1,1') || nodes[0];
+  let gameIdx = DATA.games.length ? 0 : -1, step = 0, playing = null;
+
+  // ---------- colours ----------
+  let C = {};
+  function readTokens() {
+    const s = getComputedStyle(document.documentElement);
+    for (const k of ['fg', 'muted', 'line', 'rule', 'x', 'y', 'route', 'node', 'panel'])
+      C[k] = hex(s.getPropertyValue('--' + k).trim());
+  }
+  function hex(h) { const v = parseInt(h.slice(1), 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; }
+  const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+  const mix = (a, b, t) => a.map((v, k) => v + (b[k] - v) * t);
+  function nodeColour(n) {
+    if (colourBy === 'depth') {
+      if (n.depth == null) return C.panel;
+      return mix(C.route, C.node, n.depth / Math.max(1, maxDepth));
+    }
+    if (n.status === 'p1') return C.x;
+    if (n.status === 'p2') return C.y;
+    if (n.status === 'draw') return mix(C.x, C.y, 0.5);
+    const a = Math.sqrt(n.p1_threat), b = Math.sqrt(n.p2_threat);
+    const s = Math.min(1, a + b);
+    if (s === 0) return C.node;
+    return mix(C.node, mix(C.x, C.y, b / (a + b)), Math.min(0.7, s * 1.1));
+  }
+
+  // ---------- projection ----------
+  let W = 0, H = 0, dpr = 1;
+  const centre = [2.5, 2.5, 2];
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  function project(p) {
+    const x = p[0] - centre[0], y = p[1] - centre[1], z = p[2] - centre[2];
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const x1 = x * cy + z * sy, z1 = -x * sy + z * cy;
+    const y1 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
+    const unit = Math.min(W, H) / 17 * zoom, D = 26;
+    const k = D / (D + z2);
+    return [W / 2 + x1 * unit * k, H / 2 - y1 * unit * k, z2, k];
+  }
+  const line = (a, b) => { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
+
+  // ---------- drawing ----------
+  function drawAxes() {
+    if (layout !== 'values') return;
+    ctx.font = '10.5px "JetBrains Mono", ui-monospace, monospace';
+    ctx.lineWidth = 1;
+    const lo = -4, hi = 9, zlo = -2 * 0.9, zhi = 8 * 0.9;
+    // win planes
+    const plane = (pts, c) => {
+      const q = pts.map(project); ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]);
+      for (const p of q.slice(1)) ctx.lineTo(p[0], p[1]);
+      ctx.closePath(); ctx.fillStyle = rgba(c, 0.07); ctx.fill();
+      ctx.strokeStyle = rgba(c, 0.45); ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    };
+    plane([[T, lo, zlo], [T, hi, zlo], [T, hi, zhi], [T, lo, zhi]], C.x);
+    plane([[lo, T, zlo], [hi, T, zlo], [hi, T, zhi], [lo, T, zhi]], C.y);
+    // axes through the origin
+    const axes = [[[lo, 0, 0], [hi, 0, 0], 'x', C.x], [[0, lo, 0], [0, hi, 0], 'y', C.y],
+                  [[0, 0, zlo], [0, 0, zhi], 'z', C.muted]];
+    for (const [a, b, name, c] of axes) {
+      ctx.strokeStyle = rgba(c, 0.55); line(project(a), project(b));
+      const e = project(b); ctx.fillStyle = rgba(c, 0.9); ctx.fillText(name, e[0] + 5, e[1] + 4);
+    }
+    ctx.fillStyle = rgba(C.muted, 0.85);
+    for (let v = lo; v <= hi; v++) {
+      if (v === 0) continue;
+      const px = project([v, 0, 0]); ctx.fillText(String(v), px[0] - 3, px[1] + 13);
+      const py = project([0, v, 0]); ctx.fillText(String(v), py[0] - 18, py[1] + 4);
+    }
+    const tag = (p, text, c) => {
+      const w = ctx.measureText(text).width;
+      ctx.fillStyle = rgba(c, 0.95);
+      ctx.fillText(text, Math.max(6, Math.min(W - w - 6, p[0] - w / 2)), Math.max(14, Math.min(H - 24, p[1] - 6)));
+    };
+    tag(project([T, hi, zlo]), `x ≥ ${T}: P1 wins`, C.x);
+    tag(project([hi, T, zlo]), `y ≥ ${T}: P2 wins`, C.y);
+  }
+
+  function draw() {
+    if (!W) return;
+    ctx.clearRect(0, 0, W, H);
+    const P = pos.map(project);
+    drawAxes();
+    // edges
+    const focus = selected ? selected.i : -1, hov = hover ? hover.i : -1;
+    ctx.lineWidth = 1;
+    for (const e of edges) {
+      const hot = e.a === focus || e.b === focus || e.a === hov || e.b === hov;
+      if (hot) continue;
+      ctx.strokeStyle = rgba(C.line, 0.13); line(P[e.a], P[e.b]);
+    }
+    ctx.lineWidth = 1.4;
+    for (const e of edges) {
+      const hot = e.a === focus || e.b === focus || e.a === hov || e.b === hov;
+      if (!hot) continue;
+      ctx.strokeStyle = rgba(C.fg, 0.55); line(P[e.a], P[e.b]);
+    }
+    // game route
+    const g = DATA.games[gameIdx];
+    if (g) {
+      ctx.strokeStyle = rgba(C.route, 0.9); ctx.lineWidth = 2.6; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      g.route.slice(0, step + 1).forEach((s, k) => {
+        const q = P[byId.get(s.vals).i]; k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]);
+      });
+      ctx.stroke();
+    }
+    // nodes, far to near
+    const order = nodes.map(n => n.i).sort((a, b) => P[b][2] - P[a][2]);
+    for (const i of order) {
+      const n = nodes[i], q = P[i];
+      const r = (2.2 + 2.1 * Math.log10(n.positions + 1)) * q[3] * Math.sqrt(zoom);
+      ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.6, r), 0, 7);
+      const c = nodeColour(n);
+      ctx.fillStyle = rgba(c, n.status ? 1 : 0.82); ctx.fill();
+      if (n.status && colourBy === 'threat') { ctx.strokeStyle = rgba(C.fg, 0.75); ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (n.depth == null && colourBy === 'depth') { ctx.strokeStyle = rgba(C.muted); ctx.lineWidth = 1; ctx.stroke(); }
+      if (n.id === '1,1,1') { ctx.strokeStyle = rgba(C.fg, 0.9); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.6, r) + 3.5, 0, 7); ctx.stroke(); }
+    }
+    if (g) {
+      const cur = P[byId.get(g.route[step].vals).i];
+      ctx.strokeStyle = rgba(C.route); ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cur[0], cur[1], 11, 0, 7); ctx.stroke();
+    }
+    for (const n of [selected, hover]) {
+      if (!n) continue;
+      const q = P[n.i]; ctx.strokeStyle = rgba(C.fg); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(q[0], q[1], 8, 0, 7); ctx.stroke();
+    }
+    if (hover) {
+      const q = P[hover.i]; const label = `(${hover.id})`;
+      ctx.font = '12px "JetBrains Mono", ui-monospace, monospace';
+      const w = ctx.measureText(label).width + 10;
+      const lx = Math.min(W - w - 4, q[0] + 12), ly = Math.max(16, q[1] - 12);
+      ctx.fillStyle = rgba(C.panel, 0.92); ctx.fillRect(lx, ly - 13, w, 18);
+      ctx.fillStyle = rgba(C.fg); ctx.fillText(label, lx + 5, ly);
+    }
+  }
+
+  // ---------- panels ----------
+  function legend() {
+    const el = document.getElementById('legend');
+    const sw = c => `<span class="sw" style="background:var(--${c})"></span>`;
+    el.innerHTML = colourBy === 'threat'
+      ? `<div><span class="sw" style="background:var(--x);outline:1.5px solid var(--fg)"></span>Player 1 has won</div>
+         <div><span class="sw" style="background:var(--y);outline:1.5px solid var(--fg)"></span>Player 2 has won</div>
+         <div>${sw('x')}${sw('y')}Tinted: that player can often win next move</div>
+         <div>${sw('node')}Neither side is one card from winning</div>
+         <p class="hint">Ringed point: the start, (1, 1, 1).</p>`
+      : `<div>${sw('route')}Reachable in 0–1 moves</div>
+         <div>${sw('node')}Reachable in ${maxDepth} moves</div>
+         <div><span class="sw" style="border:1px solid var(--muted)"></span>Only reached in a real game</div>`;
+  }
+  const pct = v => (v * 100).toFixed(v < 0.1 ? 1 : 0) + '%';
+  function detail() {
+    const n = selected, el = document.getElementById('detail');
+    if (!n) { el.textContent = 'Tap a point to inspect it.'; return; }
+    const st = n.status === 'p1' ? 'Player 1 has won' : n.status === 'p2' ? 'Player 2 has won'
+             : n.status === 'draw' ? 'Draw' : 'Game continues';
+    const moves = (outMoves.get(n.id) || []).slice().sort((a, b) => b.count - a.count).slice(0, 6);
+    el.innerHTML = `
+      <div class="big">x ${n.x} · y ${n.y} · z ${n.z}</div>
+      <div class="kv"><span>Status</span><span>${st}</span></div>
+      <div class="kv"><span>Contracts merged here</span><span>${n.positions.toLocaleString()}</span></div>
+      <div class="kv"><span>Fewest moves from start</span><span>${n.depth ?? 'only in a game'}</span></div>
+      ${n.status ? '' : `<div class="kv"><span>P1 can win next move</span><span>${pct(n.p1_threat)}</span></div>
+      <div class="kv"><span>P2 can win next move</span><span>${pct(n.p2_threat)}</span></div>`}
+      ${moves.length ? `<div class="label" style="margin-top:6px">Most common ways out</div>
+      <ul class="moves">${moves.map(m => `<li><span>→ (${m.target})</span><span>${m.cards.slice(0, 2).join(', ')}</span></li>`).join('')}</ul>` : ''}`;
+  }
+  function stepInfo() {
+    const el = document.getElementById('stepinfo'), g = DATA.games[gameIdx];
+    const st = document.getElementById('stepper');
+    if (!g) { el.textContent = 'No games to replay.'; return; }
+    st.max = g.route.length - 1; st.value = step;
+    const s = g.route[step];
+    el.innerHTML = step === 0
+      ? `Start at (${s.vals}). ${g.winner} won in ${g.turns} turns.`
+      : `<b>Turn ${s.turn}</b> · ${s.player} played <b>${s.card || 'nothing'}</b> → <span class="mono">(${s.vals})</span>${step === g.route.length - 1 ? `. ${g.winner} wins.` : ''}`;
+  }
+
+  // ---------- controls ----------
+  const sel = document.getElementById('game');
+  DATA.games.forEach((g, k) => {
+    const o = document.createElement('option'); o.value = k;
+    o.textContent = `Game ${g.name.replace(/\D/g, '')}: ${g.winner}, ${g.turns} turns`; sel.appendChild(o);
+  });
+  const none = document.createElement('option'); none.value = -1; none.textContent = 'No replay'; sel.appendChild(none);
+  sel.value = gameIdx;
+  sel.onchange = () => { stop(); gameIdx = +sel.value; step = 0; stepInfo(); draw(); };
+  document.getElementById('stepper').oninput = e => { stop(); step = +e.target.value; follow(); stepInfo(); draw(); };
+  document.getElementById('prev').onclick = () => { stop(); step = Math.max(0, step - 1); follow(); stepInfo(); draw(); };
+  document.getElementById('next').onclick = () => { stop(); advance(); };
+  function advance() {
+    const g = DATA.games[gameIdx]; if (!g) return false;
+    if (step >= g.route.length - 1) return false;
+    step++; follow(); stepInfo(); draw(); return true;
+  }
+  function follow() { const g = DATA.games[gameIdx]; if (g) { selected = byId.get(g.route[step].vals); detail(); } }
+  const playBtn = document.getElementById('play');
+  function stop() { if (playing) { clearInterval(playing); playing = null; playBtn.textContent = 'Play'; } }
+  playBtn.onclick = () => {
+    if (playing) return stop();
+    const g = DATA.games[gameIdx]; if (!g) return;
+    if (step >= g.route.length - 1) { step = 0; follow(); stepInfo(); draw(); }
+    playBtn.textContent = 'Pause';
+    playing = setInterval(() => { if (!advance()) stop(); }, 900);
+  };
+
+  function setPressed(a, b, on) { document.getElementById(a).setAttribute('aria-pressed', on); document.getElementById(b).setAttribute('aria-pressed', !on); }
+  function switchLayout(name) {
+    if (name === layout) return;
+    layout = name; setPressed('lay-values', 'lay-force', name === 'values');
+    if (name === 'force' && !forcePos) forcePos = computeForce();
+    from = pos.map(p => p.slice()); to = name === 'values' ? valuePos : forcePos;
+    if (reduce) { pos = to.map(p => p.slice()); draw(); return; }
+    const t0 = performance.now();
+    const tick = now => {
+      const t = Math.min(1, (now - t0) / 700), e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+      pos = from.map((p, i) => p.map((v, k) => v + (to[i][k] - v) * e)); draw();
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  document.getElementById('lay-values').onclick = () => switchLayout('values');
+  document.getElementById('lay-force').onclick = () => switchLayout('force');
+  document.getElementById('col-threat').onclick = () => { colourBy = 'threat'; setPressed('col-threat', 'col-depth', true); legend(); draw(); };
+  document.getElementById('col-depth').onclick = () => { colourBy = 'depth'; setPressed('col-threat', 'col-depth', false); legend(); draw(); };
+  document.getElementById('zin').onclick = () => { zoom = Math.min(6, zoom * 1.25); draw(); };
+  document.getElementById('zout').onclick = () => { zoom = Math.max(0.4, zoom / 1.25); draw(); };
+
+  // pointer: drag to rotate, tap to select, hover to label
+  let drag = null;
+  function nearest(px, py) {
+    let best = null, bd = 14 * 14;
+    pos.forEach((p, i) => { const q = project(p); const d = (q[0] - px) ** 2 + (q[1] - py) ** 2; if (d < bd) { bd = d; best = nodes[i]; } });
+    return best;
+  }
+  const local = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, moved: 0 }; });
+  cv.addEventListener('pointermove', e => {
+    if (drag) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy);
+      drag.x = e.clientX; drag.y = e.clientY;
+      yaw += dx * 0.008; pitch = Math.max(-1.45, Math.min(1.45, pitch + dy * 0.008)); draw();
+    } else if (e.pointerType === 'mouse') {
+      const [x, y] = local(e); const n = nearest(x, y); if (n !== hover) { hover = n; draw(); }
+    }
+  });
+  cv.addEventListener('pointerup', e => {
+    if (drag && drag.moved < 6) { const [x, y] = local(e); const n = nearest(x, y); if (n) { selected = n; detail(); draw(); } }
+    drag = null;
+  });
+  cv.addEventListener('pointerleave', () => { if (hover) { hover = null; draw(); } });
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(0.4, Math.min(6, zoom * Math.exp(-e.deltaY * 0.0015))); draw(); }, { passive: false });
+
+  // theme changes
+  const retheme = () => { readTokens(); draw(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.addEventListener('resize', resize);
+  document.fonts && document.fonts.ready.then(draw);
+
+  readTokens(); legend(); detail(); stepInfo(); resize();
+})();
+</script>
