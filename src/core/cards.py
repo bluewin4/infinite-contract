@@ -280,4 +280,194 @@ class CardLibrary:
             code="__contract__.optimize()",
             card_type=CardType.UTILITY,
             complexity=2
-        )) 
+        ))
+
+        # Expanded deck: more ways to advance, defend and reshape the contract
+        self.add_card(Card(
+            id="op_underdog_x",
+            name="Underdog X",
+            description="Add 1 to x if x is behind y",
+            code="x += 1 if x < y else 0",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_copy_z_if_larger_x",
+            name="Copy Z to X if Larger",
+            description="Set x to z if z is larger",
+            code="x = z if z > x else x",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_add_y_to_x",
+            name="Add Y to X",
+            description="Add y to x",
+            code="x += y",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_square_x",
+            name="Square X",
+            description="Multiply x by itself",
+            code="x *= x",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=3
+        ))
+        
+        self.add_card(Card(
+            id="op_reset_x",
+            name="Reset X",
+            description="Set x to 0",
+            code="x = 0",
+            card_type=CardType.DEFENSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_x_minus_z",
+            name="X Minus Z",
+            description="Subtract z from x",
+            code="x -= z",
+            card_type=CardType.DEFENSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_negate_x",
+            name="Negate X",
+            description="Flip the sign of x",
+            code="x = -x",
+            card_type=CardType.DEFENSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="swap_x_z",
+            name="Swap X and Z",
+            description="Swap the values of x and z",
+            code="x, z = z, x",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_underdog_y",
+            name="Underdog Y",
+            description="Add 1 to y if y is behind x",
+            code="y += 1 if y < x else 0",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_copy_z_if_larger_y",
+            name="Copy Z to Y if Larger",
+            description="Set y to z if z is larger",
+            code="y = z if z > y else y",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_add_x_to_y",
+            name="Add X to Y",
+            description="Add x to y",
+            code="y += x",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_square_y",
+            name="Square Y",
+            description="Multiply y by itself",
+            code="y *= y",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=3
+        ))
+        
+        self.add_card(Card(
+            id="op_reset_y",
+            name="Reset Y",
+            description="Set y to 0",
+            code="y = 0",
+            card_type=CardType.DEFENSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_y_minus_z",
+            name="Y Minus Z",
+            description="Subtract z from y",
+            code="y -= z",
+            card_type=CardType.DEFENSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_negate_y",
+            name="Negate Y",
+            description="Flip the sign of y",
+            code="y = -y",
+            card_type=CardType.DEFENSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="swap_y_z",
+            name="Swap Y and Z",
+            description="Swap the values of y and z",
+            code="y, z = z, y",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="util_halve_z",
+            name="Halve Z",
+            description="Divide z by 2",
+            code="z //= 2",
+            card_type=CardType.UTILITY,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="util_decrement_z",
+            name="Decrement Z",
+            description="Subtract 1 from z",
+            code="z -= 1",
+            card_type=CardType.UTILITY,
+            complexity=1
+        ))
+        
+        self.add_card(Card(
+            id="util_remove_first",
+            name="Remove First Line",
+            description="Remove the line that runs first",
+            code="__contract__.remove_first()",
+            card_type=CardType.UTILITY,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="util_duplicate_last",
+            name="Duplicate Last Line",
+            description="Add another copy of the most recently added line",
+            code="__contract__.duplicate_last()",
+            card_type=CardType.UTILITY,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="util_last_to_top",
+            name="Move Last Line to Top",
+            description="Make the line that runs last run first instead",
+            code="__contract__.last_to_top()",
+            card_type=CardType.UTILITY,
+            complexity=3
+        ))

@@ -6,6 +6,10 @@ from src.agents.lm_config import LMConfig
 import random
 from typing import List
 
+# Each player wins when their variable reaches this value
+TARGET = 4
+VICTORY_CONDITIONS = {'x': f"x >= {TARGET}", 'y': f"y >= {TARGET}"}
+
 class SimpleAgent(BaseAgent):
     def __init__(self, name: str, victory_condition: str, target_var: str):
         super().__init__(name, victory_condition, target_var)
@@ -50,19 +54,19 @@ def create_game_config() -> GameConfig:
         memory_window=5,
         card_library=card_library,
         get_allowed_cards=get_allowed_cards,
-        cards_per_turn=3
+        cards_per_turn=5
     )
 
 def main():
     # Configurations for each agent
     agent1_config = {
         'target_var': 'x',
-        'victory_condition': "x >= 3"
+        'victory_condition': VICTORY_CONDITIONS['x']
     }
     
     agent2_config = {
         'target_var': 'y',
-        'victory_condition': "y >= 3"
+        'victory_condition': VICTORY_CONDITIONS['y']
     }
     
     # Create game configuration

@@ -15,14 +15,14 @@ import sys
 import time
 from types import SimpleNamespace
 
-from main import create_game_config
+from main import VICTORY_CONDITIONS, create_game_config
 from src.agents.base_agent import BaseAgent
 from src.agents.lm_agent import LMAgent
 from src.core.game import InfiniteContractGame
 
 PLAYERS = {
-    1: {"name": "Player 1", "victory_condition": "x >= 3", "target_var": "x"},
-    2: {"name": "Player 2", "victory_condition": "y >= 3", "target_var": "y"},
+    1: {"name": "Player 1", "victory_condition": VICTORY_CONDITIONS['x'], "target_var": "x"},
+    2: {"name": "Player 2", "victory_condition": VICTORY_CONDITIONS['y'], "target_var": "y"},
 }
 POLL_SECONDS = 0.5
 
@@ -84,7 +84,7 @@ def serve(args):
         "final_contract": game.contract.current_code,
         "transcript": [
             {"turn": t.turn_number, "player": t.player_name, "card": t.card_name,
-             "variables": t.variables, "response": t.thought_process}
+             "hand": t.hand, "variables": t.variables, "response": t.thought_process}
             for t in turns
         ],
     }

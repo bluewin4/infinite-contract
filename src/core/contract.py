@@ -59,6 +59,12 @@ class CodeContract:
                 return self._invert_execution_order()
             elif code == "__contract__.remove(x)":
                 return self._remove_line(self.variables['x'])
+            elif code == "__contract__.remove_first()":
+                return bool(self.execution_order) and self._remove_line(self.execution_order[0])
+            elif code == "__contract__.duplicate_last()":
+                return bool(self.current_code) and self._add_normal_line(self.current_code[-1])
+            elif code == "__contract__.last_to_top()":
+                return self._move_last_to_top()
             return False
         except Exception:
             return False
@@ -121,23 +127,7 @@ class CodeContract:
 
     def apply_card(self, card: 'Card') -> None:
         """Apply a card's code to the contract"""
-        if card.code.startswith('__contract__'):
-            # Handle special utility commands
-            if card.code == "__contract__.pop()":
-                self._remove_last_line()
-            elif card.code == "__contract__.clean()":
-                self._clean_inactive_lines()
-            elif card.code == "__contract__.optimize()":
-                self._optimize_execution_order()
-            elif card.code == "__contract__.clear()":
-                self._clear_all_lines()
-            elif card.code == "__contract__.invert()":
-                self._invert_execution_order()
-        else:
-            # Handle regular code cards
-            self.add_line(card.code)
-            # Execute the entire contract after adding the line
-            self._execute_contract()
+        self.add_line(card.code)
 
     def check_victory_condition(self, condition: str) -> bool:
         """Check if the victory condition is met"""
@@ -177,6 +167,14 @@ class CodeContract:
         """Invert the execution order of all lines"""
         self._save_state()
         self.execution_order = list(reversed(self.execution_order))
+        return self._execute_contract()
+
+    def _move_last_to_top(self) -> bool:
+        """Move the last line in the execution order to the front"""
+        if len(self.execution_order) < 2:
+            return False
+        self._save_state()
+        self.execution_order = [self.execution_order[-1]] + self.execution_order[:-1]
         return self._execute_contract()
 
     def _remove_line(self, index: int) -> bool:

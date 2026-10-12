@@ -94,7 +94,8 @@ SELECTED CARD: [number]
             selected_card=selected_card,
             contract_state=self.contract.current_code,
             variables=self.contract.variables,
-            card_name=card.name if card else None
+            card_name=card.name if card else None,
+            hand=[c.id for c in self.available_cards]
         )
         
         # Check victory conditions; if one move satisfies both, it's a draw

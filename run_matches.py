@@ -13,16 +13,16 @@ import os
 from collections import Counter
 from datetime import datetime
 
-from main import create_game_config
+from main import VICTORY_CONDITIONS, create_game_config
 from src.agents.lm_agent import LMAgent
 from src.core.game import InfiniteContractGame
 
 
 def play_game(model: str, max_turns: int, max_tokens: int) -> dict:
     agents = [
-        LMAgent(name="Player 1", model=model, victory_condition="x >= 3",
+        LMAgent(name="Player 1", model=model, victory_condition=VICTORY_CONDITIONS['x'],
                 target_var="x", max_tokens=max_tokens),
-        LMAgent(name="Player 2", model=model, victory_condition="y >= 3",
+        LMAgent(name="Player 2", model=model, victory_condition=VICTORY_CONDITIONS['y'],
                 target_var="y", max_tokens=max_tokens),
     ]
     game = InfiniteContractGame(agents[0], agents[1], create_game_config())

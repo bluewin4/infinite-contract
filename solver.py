@@ -14,7 +14,7 @@ from functools import lru_cache
 from math import comb
 from typing import Dict, List, Tuple
 
-from main import create_game_config
+from main import VICTORY_CONDITIONS, create_game_config
 from src.core.cards import Card
 
 INITIAL_VARS = {'x': 1, 'y': 1, 'z': 1}
@@ -58,11 +58,25 @@ def apply(state: State, card_code: str) -> State:
         return code, tuple(range(len(code)))
     if card_code == "__contract__.clean()":
         return state  # every line is always in the execution order
+    if card_code == "__contract__.remove_first()":
+        if not order:
+            return state
+        first = order[0]
+        return (code[:first] + code[first + 1:],
+                tuple(i if i < first else i - 1 for i in order[1:]))
+    if card_code == "__contract__.duplicate_last()":
+        if not code:
+            return state
+        return code + (code[-1],), order + (len(code),)
+    if card_code == "__contract__.last_to_top()":
+        if len(order) < 2:
+            return state
+        return code, (order[-1],) + order[:-1]
     return code + (card_code,), order + (len(code),)
 
 
 class Solver:
-    def __init__(self, max_turns: int = 30, conditions=("x >= 3", "y >= 3")):
+    def __init__(self, max_turns: int = 30, conditions=(VICTORY_CONDITIONS['x'], VICTORY_CONDITIONS['y'])):
         config = create_game_config()
         self.hand_size = config.cards_per_turn
         self.decks: List[List[Card]] = []

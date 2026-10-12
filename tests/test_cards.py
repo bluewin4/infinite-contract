@@ -258,14 +258,15 @@ def test_turn_records_strategy_notes_and_card_name():
 
 def test_both_conditions_met_is_a_draw():
     game = create_test_game(victory_condition="x >= 99")
-    game.agents['agent1'].victory_condition = "x >= 1"
-    game.agents['agent2'].victory_condition = "y >= 1"
+    # Conditions that hold whatever card is played
+    game.agents['agent1'].victory_condition = "x >= -100"
+    game.agents['agent2'].victory_condition = "y >= -100"
     assert game.play_turn() is False
     assert game.winner == "draw"
 
 def test_single_winner_is_recorded():
     game = create_test_game(victory_condition="x >= 99")
-    game.agents['agent2'].victory_condition = "y >= 1"
+    game.agents['agent2'].victory_condition = "y >= -100"
     assert game.play_turn() is False
     assert game.winner == "Player 2"
 
@@ -308,3 +309,27 @@ def test_decks_are_symmetric():
     sizes = {t: len(library.get_cards_by_type(t)) for t in CardType}
     assert sizes[CardType.AGGRESSIVE_X] == sizes[CardType.AGGRESSIVE_Y]
     assert sizes[CardType.DEFENSIVE_X] == sizes[CardType.DEFENSIVE_Y]
+
+def test_expanded_contract_commands():
+    library = CardLibrary()
+    game = create_test_game(victory_condition="x >= 99")
+    play = lambda card_id: game.contract.apply_card(library.get_card(card_id))
+    play("op_increment_x")       # x += 1
+    play("op_double_x")          # x *= 2
+    assert game.contract.variables["x"] == 4
+    play("util_last_to_top")     # x *= 2 runs first: x = 1*2 + 1
+    assert game.contract.variables["x"] == 3
+    play("util_duplicate_last")  # another x *= 2, added at the end
+    assert game.contract.current_code == ["x += 1", "x *= 2", "x *= 2"]
+    assert game.contract.variables["x"] == 6
+    play("util_remove_first")    # removes the x *= 2 that ran first
+    assert game.contract.current_code == ["x += 1", "x *= 2"]
+    assert game.contract.variables["x"] == 4
+
+def test_no_card_wins_on_the_first_move():
+    library = CardLibrary()
+    for card in library.cards.values():
+        game = create_test_game(victory_condition="x >= 99")
+        game.contract.apply_card(card)
+        for var in "xy":
+            assert game.contract.variables[var] < 3, card.id

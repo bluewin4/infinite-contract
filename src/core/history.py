@@ -11,6 +11,7 @@ class TurnRecord:
     contract_state: List[str]
     variables: Dict[str, int]
     card_name: Optional[str] = None
+    hand: List[str] = field(default_factory=list)  # ids of the cards dealt
     timestamp: datetime = field(default_factory=datetime.now)
 
 class GameHistory:
@@ -24,7 +25,8 @@ class GameHistory:
                  selected_card: int,
                  contract_state: List[str],
                  variables: Dict[str, int],
-                 card_name: Optional[str] = None):
+                 card_name: Optional[str] = None,
+                 hand: Optional[List[str]] = None):
         record = TurnRecord(
             turn_number=turn_number,
             player_name=player_name,
@@ -32,7 +34,8 @@ class GameHistory:
             selected_card=selected_card,
             contract_state=contract_state.copy(),
             variables=variables.copy(),
-            card_name=card_name
+            card_name=card_name,
+            hand=list(hand or [])
         )
         self.turns.append(record)
     
