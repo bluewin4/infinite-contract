@@ -9,6 +9,7 @@ class LMAgent(BaseAgent):
                  name: str, 
                  model: str, 
                  victory_condition: str, 
+                 target_var: str = "x",
                  system_prompt: Optional[str] = None,
                  temperature: float = 0.7,
                  max_tokens: int = 500,
@@ -19,7 +20,7 @@ class LMAgent(BaseAgent):
         # Check if required API keys are available based on model
         self._check_api_keys(model)
             
-        super().__init__(name)
+        super().__init__(name, victory_condition, target_var)
         self.model = model
         self.victory_condition = victory_condition
         self.system_prompt = system_prompt or self._create_system_prompt()
@@ -69,7 +70,7 @@ Your goal is: {self.victory_condition}
 
 Game Rules:
 1. The game involves a shared Python code contract that both players modify
-2. Variables x, y, and z start at 0 and are modified through code execution
+2. Variables x, y, and z start at 1 and are modified through code execution
 3. Each turn, you can play one card that adds a line of Python code
 4. Code executes in the order it was added (shown by line numbers)
 5. Each line must be valid Python code that modifies x, y, or z

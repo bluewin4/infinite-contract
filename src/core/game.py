@@ -1,3 +1,4 @@
+import re
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 
@@ -74,18 +75,25 @@ SELECTED CARD: [number]
         # Extract selected card and thought process
         selected_card = self._extract_selected_card(response)
         
+        scratch_pad = self._extract_scratch_pad(response)
+        if scratch_pad:
+            agent.add_strategy_note(scratch_pad)
+        
         # Apply the selected card
+        card = None
         if selected_card is not None:
-            self.contract.apply_card(self.available_cards[selected_card - 1])
+            card = self.available_cards[selected_card - 1]
+            self.contract.apply_card(card)
             
         # Record the turn in history
         self.history.add_turn(
             turn_number=len(self.history.turns) + 1,
-            player_name=self.current_player,
+            player_name=agent.name,
             thought_process=response,
             selected_card=selected_card,
             contract_state=self.contract.current_code,
-            variables=self.contract.variables
+            variables=self.contract.variables,
+            card_name=card.name if card else None
         )
         
         # Check victory conditions
@@ -100,15 +108,17 @@ SELECTED CARD: [number]
 
     def _extract_selected_card(self, response: str) -> Optional[int]:
         """Extract the selected card number from the response"""
-        try:
-            parts = response.split("SELECTED CARD:")
-            if len(parts) > 1:
-                card_number = int(parts[1].strip())
-                if 1 <= card_number <= len(self.available_cards):
-                    return card_number
-            return None
-        except ValueError:
-            return None
+        match = re.search(r"SELECTED CARD:\s*\[?\s*(\d+)", response)
+        if match:
+            card_number = int(match.group(1))
+            if 1 <= card_number <= len(self.available_cards):
+                return card_number
+        return None
+
+    def _extract_scratch_pad(self, response: str) -> str:
+        """Extract the scratch pad text that precedes the selected card"""
+        scratch_pad = response.split("SELECTED CARD:")[0]
+        return scratch_pad.replace("SCRATCH PAD:", "").strip()
 
     def _switch_players(self):
         """Switch to the next player"""
@@ -122,14 +132,13 @@ SELECTED CARD: [number]
 
     def _format_history(self, history) -> str:
         return "\n".join(
-            f"Turn {turn.turn_number}: Player {turn.player_name} played card {turn.selected_card} - Variables: {turn.variables}"
+            f"Turn {turn.turn_number}: {turn.player_name} played {turn.card_name or 'no card (invalid move)'} - Variables: {turn.variables}"
             for turn in history
         )
 
     def _format_cards(self) -> str:
-        available_cards = self._get_available_cards()
         return "\n".join(f"{i+1}. {card.name}: {card.description}" 
-                        for i, card in enumerate(available_cards))
+                        for i, card in enumerate(self.available_cards))
 
     def _format_notes(self, notes: List[str]) -> str:
         return "\n".join(notes[-self.config.memory_window:])

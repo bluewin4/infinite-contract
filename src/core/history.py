@@ -10,6 +10,7 @@ class TurnRecord:
     selected_card: int
     contract_state: List[str]
     variables: Dict[str, int]
+    card_name: Optional[str] = None
     timestamp: datetime = datetime.now()
 
 class GameHistory:
@@ -22,14 +23,16 @@ class GameHistory:
                  thought_process: str,
                  selected_card: int,
                  contract_state: List[str],
-                 variables: Dict[str, int]):
+                 variables: Dict[str, int],
+                 card_name: Optional[str] = None):
         record = TurnRecord(
             turn_number=turn_number,
             player_name=player_name,
             thought_process=thought_process,
             selected_card=selected_card,
             contract_state=contract_state.copy(),
-            variables=variables.copy()
+            variables=variables.copy(),
+            card_name=card_name
         )
         self.turns.append(record)
     

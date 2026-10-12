@@ -150,7 +150,7 @@ class CardLibrary:
             id="transfer_z_to_x",
             name="Z to X",
             description="Set x equal to z",
-            code="z = x",
+            code="x = z",
             card_type=CardType.UTILITY,
             complexity=1
         ))

@@ -73,6 +73,7 @@ def main():
         name="Player 1",
         model="claude-3-haiku-20240307",
         victory_condition=agent1_config['victory_condition'],
+        target_var=agent1_config['target_var'],
         temperature=0.7,
         max_tokens=500
     )
@@ -81,6 +82,7 @@ def main():
         name="Player 2",
         model="claude-3-haiku-20240307",
         victory_condition=agent2_config['victory_condition'],
+        target_var=agent2_config['target_var'],
         temperature=0.8,
         max_tokens=500
     )

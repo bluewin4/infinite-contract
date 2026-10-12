@@ -4,18 +4,27 @@ from src.core.cards import CardLibrary, CardType, Card
 from src.agents.base_agent import BaseAgent
 
 class TestAgent(BaseAgent):
-    def __init__(self, name: str, victory_condition: str, fixed_card_number: int = 1):
-        super().__init__(name)
-        self.victory_condition = victory_condition
+    __test__ = False  # not a pytest test class
+
+    def __init__(self, name: str, victory_condition: str, fixed_card_number: int = 1,
+                 target_var: str = "x"):
+        super().__init__(name, victory_condition, target_var)
         self.fixed_card_number = fixed_card_number
+        self.prompts = []
 
     def get_response(self, prompt: str) -> str:
+        self.prompts.append(prompt)
         return f"""
 SCRATCH PAD:
 Testing card {self.fixed_card_number}
 
 SELECTED CARD: {self.fixed_card_number}
 """
+
+def get_allowed_cards(target_var: str):
+    if target_var == 'x':
+        return [CardType.AGGRESSIVE_X, CardType.DEFENSIVE_Y, CardType.STRATEGIC, CardType.UTILITY]
+    return [CardType.AGGRESSIVE_Y, CardType.DEFENSIVE_X, CardType.STRATEGIC, CardType.UTILITY]
 
 def create_test_game(victory_condition: str = "x >= 5", 
                     agent1_card: int = 1, 
@@ -24,13 +33,12 @@ def create_test_game(victory_condition: str = "x >= 5",
         max_turns=10,
         memory_window=5,
         card_library=CardLibrary(),
-        allowed_card_types=[CardType.AGGRESSIVE, CardType.DEFENSIVE, 
-                          CardType.STRATEGIC, CardType.UTILITY],
+        get_allowed_cards=get_allowed_cards,
         cards_per_turn=3
     )
     
-    agent1 = TestAgent("Player 1", victory_condition, agent1_card)
-    agent2 = TestAgent("Player 2", victory_condition, agent2_card)
+    agent1 = TestAgent("Player 1", victory_condition, agent1_card, target_var="x")
+    agent2 = TestAgent("Player 2", victory_condition, agent2_card, target_var="y")
     
     return InfiniteContractGame(agent1, agent2, config)
 
@@ -126,7 +134,7 @@ def test_card_categorization_by_goal():
     
     # Test when goal is to increase x
     increment_x = library.get_card("op_increment_x")
-    assert increment_x.card_type == CardType.AGGRESSIVE
+    assert increment_x.card_type == CardType.AGGRESSIVE_X
     
     # Test utility cards are always utility
     clear_card = library.get_card("util_clear")
@@ -160,3 +168,83 @@ def test_victory_condition():
         game.contract.apply_card(decrement_y)
     
     assert game.contract.check_victory_condition("y <= -3")
+
+def test_transfer_cards_move_in_stated_direction():
+    library = CardLibrary()
+    game = create_test_game()
+    game.contract.apply_card(library.get_card("op_double_x"))      # x = 2
+    game.contract.apply_card(library.get_card("transfer_x_to_z"))  # z = 2
+    game.contract.apply_card(library.get_card("util_reset_z"))     # z = 0
+    game.contract.apply_card(library.get_card("transfer_z_to_x"))  # x = 0
+    assert game.contract.variables == {"x": 0, "y": 1, "z": 0}
+
+def test_clear_resets_variables():
+    library = CardLibrary()
+    game = create_test_game()
+    for _ in range(3):
+        game.contract.apply_card(library.get_card("op_increment_x"))
+    game.contract.apply_card(library.get_card("util_clear"))
+    assert game.contract.variables == {"x": 1, "y": 1, "z": 1}
+    assert not game.contract.check_victory_condition("x >= 3")
+
+def test_clean_preserves_execution_order():
+    library = CardLibrary()
+    game = create_test_game()
+    game.contract.apply_card(library.get_card("op_increment_x"))   # x += 1
+    game.contract.apply_card(library.get_card("transfer_x_to_y"))  # y = x
+    game.contract.apply_card(library.get_card("util_invert"))
+    assert game.contract.variables["y"] == 1
+    game.contract.apply_card(library.get_card("util_clean"))
+    assert game.contract.variables["y"] == 1
+    # Adding a line re-runs the contract; y = x must still run before x += 1
+    game.contract.apply_card(library.get_card("op_increment_x"))
+    assert game.contract.variables == {"x": 3, "y": 1, "z": 1}
+
+@pytest.mark.parametrize("card_number", [1, 2, 3])
+def test_played_card_matches_shown_card(card_number):
+    for _ in range(20):
+        game = create_test_game(victory_condition="x >= 99", agent1_card=card_number)
+        agent = game.agents['agent1']
+        game.play_turn()
+        cards_section = agent.prompts[-1].split("Available Cards:")[1].split("Your Strategy Notes")[0]
+        shown = cards_section.strip().split('\n')[card_number - 1]
+        played = game.history.turns[-1].card_name
+        assert shown.startswith(f"{card_number}. {played}:")
+
+def test_each_player_gets_cards_for_their_variable():
+    game = create_test_game(victory_condition="x >= 99")
+    library = CardLibrary()
+    y_types = {CardType.AGGRESSIVE_Y, CardType.DEFENSIVE_X, CardType.STRATEGIC, CardType.UTILITY}
+    game.current_player = 'agent2'
+    for _ in range(20):
+        game.create_turn_prompt()
+        assert all(card.card_type in y_types for card in game.available_cards)
+
+def test_lm_agent_keeps_target_var(monkeypatch):
+    pytest.importorskip("litellm")
+    from src.agents.lm_agent import LMAgent
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    agent = LMAgent("Player 2", model="claude-test", victory_condition="y >= 3", target_var="y")
+    assert agent.target_var == "y"
+    assert agent.victory_condition == "y >= 3"
+
+@pytest.mark.parametrize("response,expected", [
+    ("SELECTED CARD: 2", 2),
+    ("SELECTED CARD: 3\n\nI chose this because...", 3),
+    ("SELECTED CARD: [2]", 2),
+    ("SELECTED CARD: 7", None),
+    ("no selection here", None),
+])
+def test_extract_selected_card(response, expected):
+    game = create_test_game()
+    game.create_turn_prompt()
+    assert game._extract_selected_card(response) == expected
+
+def test_turn_records_strategy_notes_and_card_name():
+    game = create_test_game(victory_condition="x >= 99")
+    game.play_turn()
+    assert game.agents['agent1'].strategy_notes == ["Testing card 1"]
+    turn = game.history.turns[-1]
+    assert turn.card_name is not None
+    assert turn.player_name == "Player 1"
+    assert turn.card_name in game._format_history([turn])

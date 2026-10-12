@@ -73,17 +73,12 @@ class CodeContract:
 
     def _clean_inactive_lines(self) -> bool:
         self._save_state()
-        active_lines = []
-        new_execution_order = []
+        active_indices = [i for i in range(len(self.current_code)) if i in self.execution_order]
+        new_index = {old: new for new, old in enumerate(active_indices)}
         
-        for i, line in enumerate(self.current_code):
-            if i in self.execution_order:
-                active_lines.append(line)
-                new_execution_order.append(len(active_lines) - 1)
-                
-        self.current_code = active_lines
-        self.execution_order = new_execution_order
-        return True
+        self.current_code = [self.current_code[i] for i in active_indices]
+        self.execution_order = [new_index[i] for i in self.execution_order if i in new_index]
+        return self._execute_contract()
 
     def _optimize_execution_order(self) -> bool:
         self._save_state()
@@ -176,7 +171,7 @@ class CodeContract:
         self._save_state()
         self.current_code = []
         self.execution_order = []
-        return True
+        return self._execute_contract()
 
     def _invert_execution_order(self) -> bool:
         """Invert the execution order of all lines"""
