@@ -22,6 +22,7 @@ class InfiniteContractGame:
         self.agents = {'agent1': agent1, 'agent2': agent2}
         self.config = config
         self.current_player = 'agent1'
+        self.winner: Optional[str] = None  # agent name, "draw", or None while playing
         
     def create_turn_prompt(self) -> str:
         """Create the prompt for current turn"""
@@ -96,11 +97,17 @@ SELECTED CARD: [number]
             card_name=card.name if card else None
         )
         
-        # Check victory conditions
-        for player_name, agent in self.agents.items():
-            if self.contract.check_victory_condition(agent.victory_condition):
-                print(f"\n{player_name} has won!")
-                return False
+        # Check victory conditions; if one move satisfies both, it's a draw
+        winners = [a.name for a in self.agents.values()
+                   if self.contract.check_victory_condition(a.victory_condition)]
+        if len(winners) > 1:
+            self.winner = "draw"
+            print("\nBoth victory conditions met - it's a draw!")
+            return False
+        if winners:
+            self.winner = winners[0]
+            print(f"\n{winners[0]} has won!")
+            return False
         
         # Switch players
         self._switch_players()
@@ -156,13 +163,3 @@ SELECTED CARD: [number]
         # Randomly select cards_per_turn number of cards
         import random
         return random.sample(all_cards, min(len(all_cards), self.config.cards_per_turn))
-
-    def _parse_response(self, response: str) -> tuple[str, int]:
-        """Parse agent response into scratch pad and card number"""
-        try:
-            parts = response.split("SELECTED CARD:")
-            scratch_pad = parts[0].replace("SCRATCH PAD:", "").strip()
-            card_number = int(parts[1].strip())
-            return scratch_pad, card_number
-        except Exception as e:
-            raise ValueError(f"Invalid response format: {e}")

@@ -248,3 +248,38 @@ def test_turn_records_strategy_notes_and_card_name():
     assert turn.card_name is not None
     assert turn.player_name == "Player 1"
     assert turn.card_name in game._format_history([turn])
+
+def test_both_conditions_met_is_a_draw():
+    game = create_test_game(victory_condition="x >= 99")
+    game.agents['agent1'].victory_condition = "x >= 1"
+    game.agents['agent2'].victory_condition = "y >= 1"
+    assert game.play_turn() is False
+    assert game.winner == "draw"
+
+def test_single_winner_is_recorded():
+    game = create_test_game(victory_condition="x >= 99")
+    game.agents['agent2'].victory_condition = "y >= 1"
+    assert game.play_turn() is False
+    assert game.winner == "Player 2"
+
+def test_turn_timestamps_are_per_turn():
+    from src.core.history import TurnRecord
+    first = TurnRecord(1, "a", "", 1, [], {})
+    import time; time.sleep(0.01)
+    second = TurnRecord(2, "a", "", 1, [], {})
+    assert first.timestamp < second.timestamp
+
+def test_lm_agent_omits_temperature_by_default(monkeypatch):
+    pytest.importorskip("litellm")
+    from src.agents import lm_agent
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    calls = []
+    class Msg: content = "SELECTED CARD: 1"
+    class Choice: message = Msg()
+    class Resp: choices = [Choice()]
+    monkeypatch.setattr(lm_agent, "completion", lambda **kw: calls.append(kw) or Resp())
+    lm_agent.LMAgent("P1", model="claude-haiku-5-5", victory_condition="x >= 3").get_response("hi")
+    lm_agent.LMAgent("P1", model="claude-haiku-5-5", victory_condition="x >= 3",
+                     temperature=0.5, top_k=5).get_response("hi")
+    assert "temperature" not in calls[0]
+    assert calls[1]["temperature"] == 0.5 and calls[1]["top_k"] == 5

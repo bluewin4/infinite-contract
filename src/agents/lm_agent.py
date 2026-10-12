@@ -11,8 +11,8 @@ class LMAgent(BaseAgent):
                  victory_condition: str, 
                  target_var: str = "x",
                  system_prompt: Optional[str] = None,
-                 temperature: float = 0.7,
-                 max_tokens: int = 500,
+                 temperature: Optional[float] = None,
+                 max_tokens: int = 4096,
                  **model_kwargs):
         # Load environment variables at initialization
         load_dotenv()
@@ -46,14 +46,14 @@ class LMAgent(BaseAgent):
         ]
         
         try:
-            # Remove any model-specific kwargs that might not be supported
-            kwargs = {k: v for k, v in self.model_kwargs.items() 
-                      if k in ['temperature', 'max_tokens']}
+            # Only send temperature when set; some models reject non-default values
+            kwargs = dict(self.model_kwargs)
+            if self.temperature is not None:
+                kwargs['temperature'] = self.temperature
             
             response = completion(
                 model=self.model,
                 messages=messages,
-                temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 **kwargs
             )

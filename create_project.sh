@@ -62,11 +62,7 @@ touch infinite_contract_game/config/logging_config.yaml
 touch infinite_contract_game/main.py
 
 # Create setup files
-touch infinite_contract_game/{
-    setup.py,
-    requirements.txt,
-    README.md,
-    .gitignore
+touch infinite_contract_game/{setup.py,requirements.txt,README.md,.gitignore}
 
 
 echo "Project structure created successfully!" 

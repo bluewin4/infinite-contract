@@ -71,20 +71,18 @@ def main():
     # Create LM agents
     agent1 = LMAgent(
         name="Player 1",
-        model="claude-3-haiku-20240307",
+        model="claude-haiku-5-5",
         victory_condition=agent1_config['victory_condition'],
         target_var=agent1_config['target_var'],
-        temperature=0.7,
-        max_tokens=500
+        max_tokens=4096  # leaves room for thinking before the answer
     )
     
     agent2 = LMAgent(
         name="Player 2",
-        model="claude-3-haiku-20240307",
+        model="claude-haiku-5-5",
         victory_condition=agent2_config['victory_condition'],
         target_var=agent2_config['target_var'],
-        temperature=0.8,
-        max_tokens=500
+        max_tokens=4096  # leaves room for thinking before the answer
     )
     
     # Alternatively, use SimpleAgent for testing
@@ -105,17 +103,22 @@ def main():
     run_game_with_logging(game, config.max_turns)
 
 def run_game_with_logging(game: InfiniteContractGame, max_turns: int):
-    turn_count = 0
-    while game.play_turn() and turn_count < max_turns:
-        turn_count += 1
+    for turn_count in range(1, max_turns + 1):
+        still_playing = game.play_turn()
         current_turn = game.history.get_turn(turn_count)
         
         print(f"\n=== Turn {turn_count} ===")
         print(f"Player: {current_turn.player_name}")
+        print(f"Card: {current_turn.card_name or 'none (invalid move)'}")
         print(f"Thought Process:\n{current_turn.thought_process}")
         print(f"Contract:\n{current_turn.contract_state}")
         print(f"Variables: {current_turn.variables}")
         print("-" * 50)
+        
+        if not still_playing:
+            break
+    else:
+        print(f"\nNo winner after {max_turns} turns.")
 
 if __name__ == "__main__":
     main() 

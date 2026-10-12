@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime
 
@@ -11,7 +11,7 @@ class TurnRecord:
     contract_state: List[str]
     variables: Dict[str, int]
     card_name: Optional[str] = None
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = field(default_factory=datetime.now)
 
 class GameHistory:
     def __init__(self):
