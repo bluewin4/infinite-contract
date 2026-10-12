@@ -65,6 +65,13 @@ def test_card_library_initialization():
     
     # Utility operations
     ("util_reset_z", "x >= 10", {"x": 1, "y": 1, "z": 0}),  # Only z gets reset to 0
+    ("op_add_z_to_x", "x >= 10", {"x": 2, "y": 1, "z": 1}),
+    ("op_add_z_to_y", "x >= 10", {"x": 1, "y": 2, "z": 1}),
+    ("op_catch_up_x", "x >= 10", {"x": 1, "y": 1, "z": 1}),
+    ("op_catch_up_y", "x >= 10", {"x": 1, "y": 1, "z": 1}),
+    ("swap_x_y", "x >= 10", {"x": 1, "y": 1, "z": 1}),
+    ("util_increment_z", "x >= 10", {"x": 1, "y": 1, "z": 2}),
+    ("util_double_z", "x >= 10", {"x": 1, "y": 1, "z": 2}),
 ])
 def test_individual_card_execution(card_id, victory_condition, expected_vars):
     library = CardLibrary()
@@ -283,3 +290,21 @@ def test_lm_agent_omits_temperature_by_default(monkeypatch):
                      temperature=0.5, top_k=5).get_response("hi")
     assert "temperature" not in calls[0]
     assert calls[1]["temperature"] == 0.5 and calls[1]["top_k"] == 5
+
+def test_new_cards_interact():
+    library = CardLibrary()
+    game = create_test_game(victory_condition="x >= 99")
+    play = lambda card_id: game.contract.apply_card(library.get_card(card_id))
+    play("op_double_y")      # y = 2
+    play("op_catch_up_x")    # x = 2
+    assert game.contract.variables["x"] == 2
+    play("util_double_z")    # z = 2
+    play("op_add_z_to_x")    # x = 4
+    play("swap_x_y")         # x = 2, y = 4
+    assert game.contract.variables == {"x": 2, "y": 4, "z": 2}
+
+def test_decks_are_symmetric():
+    library = CardLibrary()
+    sizes = {t: len(library.get_cards_by_type(t)) for t in CardType}
+    assert sizes[CardType.AGGRESSIVE_X] == sizes[CardType.AGGRESSIVE_Y]
+    assert sizes[CardType.DEFENSIVE_X] == sizes[CardType.DEFENSIVE_Y]

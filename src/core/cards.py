@@ -108,7 +108,52 @@ class CardLibrary:
             complexity=2
         ))
 
+        self.add_card(Card(
+            id="op_add_z_to_x",
+            name="Add Z to X",
+            description="Add z to x",
+            code="x += z",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_add_z_to_y",
+            name="Add Z to Y",
+            description="Add z to y",
+            code="y += z",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_catch_up_x",
+            name="Catch Up X",
+            description="Set x to y if y is larger",
+            code="x = x if x > y else y",
+            card_type=CardType.AGGRESSIVE_X,
+            complexity=2
+        ))
+        
+        self.add_card(Card(
+            id="op_catch_up_y",
+            name="Catch Up Y",
+            description="Set y to x if x is larger",
+            code="y = y if y > x else x",
+            card_type=CardType.AGGRESSIVE_Y,
+            complexity=2
+        ))
+
         # Variable Transfers - Strategic moves
+        self.add_card(Card(
+            id="swap_x_y",
+            name="Swap X and Y",
+            description="Swap the values of x and y",
+            code="x, y = y, x",
+            card_type=CardType.STRATEGIC,
+            complexity=2
+        ))
+        
         self.add_card(Card(
             id="transfer_x_to_y",
             name="X to Y",
@@ -162,6 +207,24 @@ class CardLibrary:
             code="y = z",
             card_type=CardType.UTILITY,
             complexity=1
+        ))
+
+        self.add_card(Card(
+            id="util_increment_z",
+            name="Increment Z",
+            description="Add 1 to z",
+            code="z += 1",
+            card_type=CardType.UTILITY,
+            complexity=1
+        ))
+        
+        self.add_card(Card(
+            id="util_double_z",
+            name="Double Z",
+            description="Multiply z by 2",
+            code="z *= 2",
+            card_type=CardType.UTILITY,
+            complexity=2
         ))
 
         # Contract manipulation cards remain as UTILITY
